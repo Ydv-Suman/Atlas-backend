@@ -9,7 +9,6 @@ public class UserMapper {
 
     public UserDto toUserDto(AtlasUsers atlasUsers) {
         UserDto userDto = new UserDto();
-        userDto.setId(atlasUsers.getId());
         userDto.setUsername(atlasUsers.getUsername());
         userDto.setEmail(atlasUsers.getEmail());
         userDto.setRole(atlasUsers.getRole());
