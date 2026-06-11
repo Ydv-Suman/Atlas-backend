@@ -4,6 +4,7 @@ import com.atlas.auth_service.dto.UserDto;
 import com.atlas.auth_service.entity.AtlasUsers;
 import com.atlas.auth_service.entity.UserRole;
 import com.atlas.auth_service.entity.UserTier;
+import com.atlas.auth_service.exception.OtpException;
 import com.atlas.auth_service.exception.PasswordMismatchException;
 import com.atlas.auth_service.exception.UserAlreadyExistsException;
 import com.atlas.auth_service.exception.UserNotFoundException;
@@ -12,7 +13,9 @@ import com.atlas.auth_service.repository.AtlasUserRespsitory;
 import com.atlas.auth_service.dto.AdminRegisterRequestDto;
 import com.atlas.auth_service.dto.RegisterRequestDto;
 import com.atlas.auth_service.dto.UpdateUserRequestDto;
+import com.atlas.auth_service.service.EmailService;
 import com.atlas.auth_service.service.IUserRegistrationService;
+import com.atlas.auth_service.service.OtpService;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -25,11 +28,21 @@ public class UserServiceRegistrationImpl implements IUserRegistrationService {
     private final AtlasUserRespsitory atlasUserRespsitory;
     private final PasswordEncoder passwordEncoder;
     private final UserMapper userMapper;
+    private final OtpService otpService;
+    private final EmailService emailService;
 
-    public UserServiceRegistrationImpl(AtlasUserRespsitory atlasUserRespsitory, PasswordEncoder passwordEncoder, UserMapper userMapper) {
+    public UserServiceRegistrationImpl(
+            AtlasUserRespsitory atlasUserRespsitory,
+            PasswordEncoder passwordEncoder,
+            UserMapper userMapper,
+            OtpService otpService,
+            EmailService emailService
+    ) {
         this.atlasUserRespsitory = atlasUserRespsitory;
         this.passwordEncoder = passwordEncoder;
         this.userMapper = userMapper;
+        this.otpService = otpService;
+        this.emailService = emailService;
     }
 
     @Override
@@ -46,6 +59,9 @@ public class UserServiceRegistrationImpl implements IUserRegistrationService {
                 registerRequestDto.password(),
                 UserRole.ROLE_USER
         );
+
+        String otp = otpService.generateAndStoreOtp(registerRequestDto.email());
+        emailService.sendOtpEmailAsync(registerRequestDto.email(), otp);
     }
 
     @Override
@@ -165,5 +181,36 @@ public class UserServiceRegistrationImpl implements IUserRegistrationService {
                 .orElseThrow(() -> new UserNotFoundException("User not found with username: " + username));
         atlasUserRespsitory.delete(atlasUsers);
         return true;
+    }
+
+    @Override
+    @Transactional
+    public void verifyEmail(String email, String otp) {
+        AtlasUsers user = atlasUserRespsitory.findByEmail(email)
+                .orElseThrow(() -> new UserNotFoundException("User not found with email: " + email));
+
+        if (user.isEmailVerified()) {
+            throw new OtpException("Email is already verified");
+        }
+
+        otpService.verifyOtp(email, otp);
+
+        user.setEmailVerified(true);
+        atlasUserRespsitory.save(user);
+    }
+
+    @Override
+    public void resendOtp(String email) {
+        AtlasUsers user = atlasUserRespsitory.findByEmail(email)
+                .orElseThrow(() -> new UserNotFoundException("User not found with email: " + email));
+
+        if (user.isEmailVerified()) {
+            throw new OtpException("Email is already verified");
+        }
+
+        otpService.checkResendCooldown(email);
+
+        String otp = otpService.generateAndStoreOtp(email);
+        emailService.sendOtpEmail(email, otp);
     }
 }

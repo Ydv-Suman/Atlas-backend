@@ -16,4 +16,8 @@ public interface IUserRegistrationService {
     boolean updateUser(String username, UpdateUserRequestDto updateUserRequestDto);
 
     boolean deleteUser(String username);
+
+    void verifyEmail(String email, String otp);
+
+    void resendOtp(String email);
 }

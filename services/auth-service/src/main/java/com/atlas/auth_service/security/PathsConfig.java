@@ -13,7 +13,9 @@ public class PathsConfig {
         return List.of(
                 "/atlas/v1/csrf/public",
                 "/atlas/v1/auth/login",
-                "/atlas/v1/users/register/public"
+                "/atlas/v1/users/register/public",
+                "/atlas/v1/users/verify-email",
+                "/atlas/v1/users/resend-otp"
         );
     }
 

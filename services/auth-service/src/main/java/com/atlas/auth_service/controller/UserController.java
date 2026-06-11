@@ -3,9 +3,11 @@ package com.atlas.auth_service.controller;
 import com.atlas.auth_service.Constants.AuthConstants;
 import com.atlas.auth_service.dto.AdminRegisterRequestDto;
 import com.atlas.auth_service.dto.RegisterRequestDto;
+import com.atlas.auth_service.dto.ResendOtpRequestDto;
 import com.atlas.auth_service.dto.ResponseDto;
 import com.atlas.auth_service.dto.UpdateUserRequestDto;
 import com.atlas.auth_service.dto.UserDto;
+import com.atlas.auth_service.dto.VerifyEmailRequestDto;
 import com.atlas.auth_service.service.IUserRegistrationService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
@@ -45,6 +47,22 @@ public class UserController {
         return ResponseEntity
                 .status(HttpStatus.CREATED)
                 .body(new ResponseDto(AuthConstants.STATUS_201, AuthConstants.MESSAGE_201));
+    }
+
+    @PostMapping("/verify-email")
+    public ResponseEntity<ResponseDto> verifyEmail(@Valid @RequestBody VerifyEmailRequestDto verifyEmailRequestDto) {
+        userRegistrationService.verifyEmail(verifyEmailRequestDto.email(), verifyEmailRequestDto.otp());
+        return ResponseEntity
+                .status(HttpStatus.OK)
+                .body(new ResponseDto(AuthConstants.STATUS_200, "Email verified successfully"));
+    }
+
+    @PostMapping("/resend-otp")
+    public ResponseEntity<ResponseDto> resendOtp(@Valid @RequestBody ResendOtpRequestDto resendOtpRequestDto) {
+        userRegistrationService.resendOtp(resendOtpRequestDto.email());
+        return ResponseEntity
+                .status(HttpStatus.OK)
+                .body(new ResponseDto(AuthConstants.STATUS_200, "OTP sent successfully"));
     }
 
     @PreAuthorize("isAuthenticated()")

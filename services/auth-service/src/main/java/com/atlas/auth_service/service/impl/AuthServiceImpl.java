@@ -3,6 +3,7 @@ package com.atlas.auth_service.service.impl;
 import com.atlas.auth_service.dto.LoginRequestDto;
 import com.atlas.auth_service.dto.LoginResponseDto;
 import com.atlas.auth_service.entity.AtlasUsers;
+import com.atlas.auth_service.exception.EmailNotVerifiedException;
 import com.atlas.auth_service.exception.InvalidCredentialsException;
 import com.atlas.auth_service.mapper.UserMapper;
 import com.atlas.auth_service.repository.AtlasUserRespsitory;
@@ -49,6 +50,10 @@ public class AuthServiceImpl implements IAuthService {
         if (atlasUsers == null || !passwordMatches) {
             log.warn("Failed login attempt for username: {}", loginRequestDto.username());
             throw new InvalidCredentialsException("Invalid username or password");
+        }
+
+        if (!atlasUsers.isEmailVerified()) {
+            throw new EmailNotVerifiedException("Email not verified. Please verify your email before logging in");
         }
 
         log.info("Successful login for username: {}", loginRequestDto.username());

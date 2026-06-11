@@ -16,4 +16,6 @@ public interface AtlasUserRespsitory extends JpaRepository<AtlasUsers, UUID> {
     boolean existsByRole(UserRole role);
 
     Optional<AtlasUsers> findByUsername(String username);
+
+    Optional<AtlasUsers> findByEmail(String email);
 }
