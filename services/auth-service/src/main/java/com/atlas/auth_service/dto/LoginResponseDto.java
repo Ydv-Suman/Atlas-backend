@@ -1,4 +1,4 @@
-package com.atlas.auth_service.auth.dto;
+package com.atlas.auth_service.dto;
 
 public record LoginResponseDto(
         String message,

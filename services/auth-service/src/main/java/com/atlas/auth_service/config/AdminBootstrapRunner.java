@@ -1,8 +1,8 @@
 package com.atlas.auth_service.config;
 
 import com.atlas.auth_service.entity.UserRole;
-import com.atlas.auth_service.registration.dto.AdminRegisterRequestDto;
-import com.atlas.auth_service.registration.service.IUserRegistrationService;
+import com.atlas.auth_service.dto.AdminRegisterRequestDto;
+import com.atlas.auth_service.service.IUserRegistrationService;
 import com.atlas.auth_service.repository.AtlasUserRespsitory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.ApplicationArguments;

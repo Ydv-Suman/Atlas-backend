@@ -1,4 +1,4 @@
-package com.atlas.auth_service.auth.dto;
+package com.atlas.auth_service.dto;
 
 import com.atlas.auth_service.entity.UserTier;
 import com.atlas.auth_service.entity.UserRole;

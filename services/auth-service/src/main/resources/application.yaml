@@ -1,5 +1,8 @@
 server:
   port: 8081
+  tomcat:
+    max-http-form-post-size: 1MB
+    max-swallow-size: 1MB
 
 spring:
   application:
@@ -14,5 +17,9 @@ spring:
   jpa:
     hibernate:
       ddl-auto: validate
-    show-sql: true
+    show-sql: false
     open-in-view: false
+app:
+  jwt:
+    secret: ${JWT_SECRET}
+    expiration-ms: ${JWT_EXPIRATION_MS}

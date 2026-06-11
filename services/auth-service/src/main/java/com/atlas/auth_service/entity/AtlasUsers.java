@@ -48,7 +48,7 @@ public class AtlasUsers {
     @Column(name = "username", nullable = false, unique = true)
     private String username;
 
-    @Size(max=50)
+    @Size(max=254)
     @NotNull
     @Column(name = "email", nullable = false, unique = true)
     private String email;
@@ -59,7 +59,8 @@ public class AtlasUsers {
     private UserRole role = UserRole.ROLE_USER;
 
     @Size(max=200)
-    @Column(name = "hashed_password")
+    @NotNull
+    @Column(name = "hashed_password", nullable = false)
     private String hashedPassword;
 
     @Column(name = "email_verified", nullable = false)

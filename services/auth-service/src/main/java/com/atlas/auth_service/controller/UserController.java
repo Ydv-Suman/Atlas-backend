@@ -1,0 +1,78 @@
+package com.atlas.auth_service.controller;
+
+import com.atlas.auth_service.Constants.AuthConstants;
+import com.atlas.auth_service.dto.AdminRegisterRequestDto;
+import com.atlas.auth_service.dto.RegisterRequestDto;
+import com.atlas.auth_service.dto.ResponseDto;
+import com.atlas.auth_service.dto.UpdateUserRequestDto;
+import com.atlas.auth_service.dto.UserDto;
+import com.atlas.auth_service.service.IUserRegistrationService;
+import jakarta.validation.Valid;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RestController;
+
+@RestController
+@RequestMapping("/users")
+public class UserController {
+
+    private final IUserRegistrationService userRegistrationService;
+
+    public UserController(IUserRegistrationService userRegistrationService) {
+        this.userRegistrationService = userRegistrationService;
+    }
+
+    @PostMapping("/register/public")
+    public ResponseEntity<ResponseDto> registerUser(@Valid @RequestBody RegisterRequestDto registerRequestDto) {
+        userRegistrationService.registerUser(registerRequestDto);
+        return ResponseEntity
+                .status(HttpStatus.CREATED)
+                .body(new ResponseDto(AuthConstants.STATUS_201, AuthConstants.MESSAGE_201));
+    }
+
+    @PreAuthorize("hasRole('ADMIN')")
+    @PostMapping("/register/admin")
+    public ResponseEntity<ResponseDto> registerAdminUser(@Valid @RequestBody AdminRegisterRequestDto adminRegisterRequestDto) {
+        userRegistrationService.registerAdminUser(adminRegisterRequestDto);
+        return ResponseEntity
+                .status(HttpStatus.CREATED)
+                .body(new ResponseDto(AuthConstants.STATUS_201, AuthConstants.MESSAGE_201));
+    }
+
+    @PreAuthorize("isAuthenticated()")
+    @GetMapping("/fetch")
+    public ResponseEntity<UserDto> getAuthenticatedUser(Authentication authentication) {
+        return ResponseEntity
+                .status(HttpStatus.OK)
+                .body(userRegistrationService.getUser(authentication.getName()));
+    }
+
+    @PreAuthorize("isAuthenticated()")
+    @PutMapping("/update")
+    public ResponseEntity<ResponseDto> updateUser(
+            Authentication authentication,
+            @Valid @RequestBody UpdateUserRequestDto updateUserRequestDto
+    ) {
+        boolean updated = userRegistrationService.updateUser(authentication.getName(), updateUserRequestDto);
+        return ResponseEntity
+                .status(HttpStatus.OK)
+                .body(new ResponseDto(updated ? AuthConstants.STATUS_200 : AuthConstants.STATUS_417, updated ? AuthConstants.MESSAGE_200 : AuthConstants.MESSAGE_417_UPDATE));
+    }
+
+    @PreAuthorize("isAuthenticated()")
+    @DeleteMapping("/delete")
+    public ResponseEntity<ResponseDto> deleteUser(Authentication authentication) {
+        boolean deleted = userRegistrationService.deleteUser(authentication.getName());
+        return ResponseEntity
+                .status(HttpStatus.OK)
+                .body(new ResponseDto(deleted ? AuthConstants.STATUS_200 : AuthConstants.STATUS_417, deleted ? AuthConstants.MESSAGE_200 : AuthConstants.MESSAGE_417_DELETE));
+    }
+}
