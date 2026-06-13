@@ -1,8 +1,5 @@
 server:
-  port: 8081
-  tomcat:
-    max-http-form-post-size: 1MB
-    max-swallow-size: 1MB
+  port: 8090
 
 spring:
   application:
@@ -16,7 +13,7 @@ spring:
     driver-class-name: org.postgresql.Driver
   jpa:
     hibernate:
-      ddl-auto: validate
+      ddl-auto: update
     show-sql: false
     open-in-view: false
   data:

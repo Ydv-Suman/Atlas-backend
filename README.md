@@ -113,13 +113,26 @@ Register → Email OTP sent → Verify email → Free credits granted
    #          MAIL_USERNAME, MAIL_PASSWORD
    ```
 
-3. **Start infrastructure**
+3. **Start infrastructure with Docker Compose**
    ```bash
-   docker run -d --name redis -p 6379:6379 redis
-   # Start PostgreSQL (or use Docker)
+   cd services/auth-service
+   docker-compose up -d
+   ```
+   Starts PostgreSQL, Redis, and auth-service. Requires `.env` file for secrets (JWT, mail credentials).
+
+   To run only infrastructure (database + Redis) without the service:
+   ```bash
+   docker-compose up -d authdb redis
    ```
 
-4. **Build and run a service**
+4. **Build Docker image (Jib)**
+   ```bash
+   cd services/auth-service
+   mvn compile jib:dockerBuild
+   ```
+   Builds image to local Docker daemon (`sumanydv/auth-service:v1`). No Dockerfile needed.
+
+5. **Run locally without Docker** (requires infrastructure from step 3)
    ```bash
    cd services/auth-service
    ./mvnw package -DskipTests

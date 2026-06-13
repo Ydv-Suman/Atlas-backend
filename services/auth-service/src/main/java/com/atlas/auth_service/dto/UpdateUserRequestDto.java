@@ -16,8 +16,11 @@ public record UpdateUserRequestDto(
         @Size(min = 5, max = 50)
         String username,
 
-        @Size(max = 254)
+        @Size(max = 100)
         @Email
-        String email
+        String email,
+
+        @Size(max=200)
+        String password
 ) {
 }

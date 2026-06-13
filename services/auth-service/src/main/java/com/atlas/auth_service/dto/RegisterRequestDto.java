@@ -22,7 +22,7 @@ public record RegisterRequestDto(
         @Pattern(regexp = "^[a-zA-Z0-9._-]+$", message = "Username may only contain letters, digits, dots, hyphens, and underscores")
         String username,
 
-        @Size(max = 254, message = "Email must not exceed 254 characters")
+        @Size(max = 100, message = "Email must not exceed 100 characters")
         @Email(message = "Email must be a valid email address")
         @NotBlank(message = "Email is required")
         String email,

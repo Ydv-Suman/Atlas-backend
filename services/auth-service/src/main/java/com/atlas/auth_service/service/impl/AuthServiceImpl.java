@@ -5,7 +5,6 @@ import com.atlas.auth_service.dto.LoginResponseDto;
 import com.atlas.auth_service.entity.AtlasUsers;
 import com.atlas.auth_service.exception.EmailNotVerifiedException;
 import com.atlas.auth_service.exception.InvalidCredentialsException;
-import com.atlas.auth_service.mapper.UserMapper;
 import com.atlas.auth_service.repository.AtlasUserRespsitory;
 import com.atlas.auth_service.security.JwtService;
 import com.atlas.auth_service.service.IAuthService;
@@ -24,18 +23,15 @@ public class AuthServiceImpl implements IAuthService {
 
     private final AtlasUserRespsitory atlasUserRespsitory;
     private final PasswordEncoder passwordEncoder;
-    private final UserMapper userMapper;
     private final JwtService jwtService;
 
     public AuthServiceImpl(
             AtlasUserRespsitory atlasUserRespsitory,
             PasswordEncoder passwordEncoder,
-            UserMapper userMapper,
             JwtService jwtService
     ) {
         this.atlasUserRespsitory = atlasUserRespsitory;
         this.passwordEncoder = passwordEncoder;
-        this.userMapper = userMapper;
         this.jwtService = jwtService;
     }
 
@@ -59,7 +55,8 @@ public class AuthServiceImpl implements IAuthService {
         log.info("Successful login for username: {}", loginRequestDto.username());
         return new LoginResponseDto(
                 "Login successful",
-                userMapper.toUserDto(atlasUsers),
+                atlasUsers.getUsername(),
+                atlasUsers.getEmail(),
                 jwtService.generateToken(atlasUsers)
         );
     }

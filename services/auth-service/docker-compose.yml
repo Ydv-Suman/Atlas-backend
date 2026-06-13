@@ -1,0 +1,49 @@
+services:
+  authdb:
+    image: postgres:17.10
+    container_name: "atlasAuthdb"
+    volumes:
+      - "/Volumes/Storage/Data/postgres:/var/lib/postgresql/data"
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_DB: atlasdb
+      POSTGRES_USER: atlas
+      POSTGRES_PASSWORD: atlas123
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U atlas -d atlasdb"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  redis:
+    image: redis:8.2.7
+    container_name: "redis"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    ports:
+      - "6379:6379"
+
+  atlasauthservice:
+    image: "sumanydv/auth-service:v1"
+    container_name: "atlasauth-service"
+    ports:
+      - "8090:8090"
+    depends_on:
+      authdb:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    env_file:
+      - .env
+    environment:
+      DB_URL: "jdbc:postgresql://authdb:5432/atlasdb"
+      DB_USERNAME: "atlas"
+      DB_PASSWORD: "atlas123"
+      REDIS_HOST: "redis"
+      REDIS_PORT: "6379"

@@ -4,6 +4,7 @@ import com.atlas.auth_service.dto.UserDto;
 import com.atlas.auth_service.entity.AtlasUsers;
 import com.atlas.auth_service.entity.UserRole;
 import com.atlas.auth_service.entity.UserTier;
+import com.atlas.auth_service.exception.EmailNotVerifiedException;
 import com.atlas.auth_service.exception.OtpException;
 import com.atlas.auth_service.exception.PasswordMismatchException;
 import com.atlas.auth_service.exception.UserAlreadyExistsException;
@@ -80,6 +81,12 @@ public class UserServiceRegistrationImpl implements IUserRegistrationService {
         );
     }
 
+    private void requireVerifiedEmail(AtlasUsers user) {
+        if (!user.isEmailVerified()) {
+            throw new EmailNotVerifiedException("Email must be verified before this action");
+        }
+    }
+
     private void validatePasswordConfirmation(String password, String confirmPassword) {
         if (!password.equals(confirmPassword)) {
             throw new PasswordMismatchException("Password and confirm password do not match");
@@ -134,6 +141,7 @@ public class UserServiceRegistrationImpl implements IUserRegistrationService {
         AtlasUsers atlasUsers = atlasUserRespsitory.findByUsername(username)
                 .orElseThrow(() -> new UserNotFoundException("User not found with username: " + username));
 
+        requireVerifiedEmail(atlasUsers);
         validateUpdatedUser(atlasUsers, updateUserRequestDto);
         applyUserUpdates(atlasUsers, updateUserRequestDto);
         atlasUserRespsitory.save(atlasUsers);
@@ -169,8 +177,14 @@ public class UserServiceRegistrationImpl implements IUserRegistrationService {
         if (updateUserRequestDto.username() != null) {
             atlasUsers.setUsername(updateUserRequestDto.username());
         }
-        if (updateUserRequestDto.email() != null) {
-            atlasUsers.setEmail(updateUserRequestDto.email());
+        if (updateUserRequestDto.email() != null
+                && !updateUserRequestDto.email().equals(atlasUsers.getEmail())) {
+            String newEmail = updateUserRequestDto.email();
+            atlasUsers.setEmail(newEmail);
+            atlasUsers.setEmailVerified(false);
+
+            String otp = otpService.generateAndStoreOtp(newEmail);
+            emailService.sendOtpEmail(newEmail, otp);
         }
     }
 
@@ -179,6 +193,7 @@ public class UserServiceRegistrationImpl implements IUserRegistrationService {
     public boolean deleteUser(String username) {
         AtlasUsers atlasUsers = atlasUserRespsitory.findByUsername(username)
                 .orElseThrow(() -> new UserNotFoundException("User not found with username: " + username));
+        requireVerifiedEmail(atlasUsers);
         atlasUserRespsitory.delete(atlasUsers);
         return true;
     }

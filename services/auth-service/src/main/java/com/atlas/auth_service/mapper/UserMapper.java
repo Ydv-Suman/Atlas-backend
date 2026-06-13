@@ -9,15 +9,16 @@ public class UserMapper {
 
     public UserDto toUserDto(AtlasUsers atlasUsers) {
         UserDto userDto = new UserDto();
-        userDto.setUsername(atlasUsers.getUsername());
-        userDto.setEmail(atlasUsers.getEmail());
-        userDto.setRole(atlasUsers.getRole());
         userDto.setFirstName(atlasUsers.getFirstName());
         userDto.setMiddleName(atlasUsers.getMiddleName());
         userDto.setLastName(atlasUsers.getLastName());
+        userDto.setUsername(atlasUsers.getUsername());
+        userDto.setEmail(atlasUsers.getEmail());
+        userDto.setRole(atlasUsers.getRole());
         userDto.setTier(atlasUsers.getTier());
+        userDto.setEmailVerified(atlasUsers.isEmailVerified());
+        userDto.setGithubAuthorized(atlasUsers.isGithubAuthorized());
         userDto.setCreatedAt(atlasUsers.getCreatedAt());
-        userDto.setUpdatedAt(atlasUsers.getUpdatedAt());
         return userDto;
     }
 }
