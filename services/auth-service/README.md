@@ -6,20 +6,28 @@ Spring Boot service for authentication and user management.
 
 - Java 25
 - Maven
-- PostgreSQL
-- Docker, if you want to run PostgreSQL locally in a container
+- Redis (Docker)
+- Neon PostgreSQL (cloud-hosted)
 
 ## Configuration
 
 Copy `.env.example` to `.env` in this directory and fill in the values:
 
 ```properties
-DB_URL=jdbc:postgresql://localhost:5432/auth
-DB_USERNAME=username
-DB_PASSWORD=change-me
+DB_URL=jdbc:postgresql://<neon-host>/<dbname>?sslmode=require
+DB_USERNAME=neondb_owner
+DB_PASSWORD=your_neon_password
+JWT_SECRET=your_jwt_secret
+JWT_EXPIRATION_MS=86400000
+REDIS_HOST=localhost
+REDIS_PORT=6379
+MAIL_HOST=smtp.gmail.com
+MAIL_PORT=587
+MAIL_USERNAME=your_email@gmail.com
+MAIL_PASSWORD=your_app_password
 ```
 
-`application.yaml` reads these values from environment variables or from `.env`:
+`application.yml` reads these values from environment variables or from `.env`:
 
 ```yaml
 spring:
@@ -34,45 +42,124 @@ spring:
 If you run the service from the repo root, Spring can read `services/auth-service/.env`.
 If you run it from inside `services/auth-service`, it can read the local `.env`.
 
-## Run PostgreSQL in Docker
+## Infrastructure
 
-Start PostgreSQL with a bind-mounted data directory:
-
-```bash
-docker run -d \
-  --name atlasAuthDB \
-  -e POSTGRES_DB=auth \
-  -e POSTGRES_USER=suman \
-  -e POSTGRES_PASSWORD=<password> \
-  -p 5432:5432 \
-  -v /Volumes/Storage/Data/postgres:/var/lib/postgresql/data \
-  postgres:16
-```
-
-If you already have data in that folder, PostgreSQL will reuse it.
-
-## Access PostgreSQL
-
-Open `psql` inside the container:
+### Redis (Docker)
 
 ```bash
-docker exec -it atlasAuthDB psql -U username -d auth
+docker run -d --name redis -p 6379:6379 redis:8.2.7
 ```
 
-Connect from your machine:
+Or via docker compose:
 
 ```bash
-psql -h localhost -p 5432 -U username -d auth -W
+docker compose -f services/auth-service/docker-compose.yml up redis -d
 ```
 
-Useful `psql` commands:
+### PostgreSQL (Neon)
 
-```sql
-\l
-\dt
-\d users
-SELECT * FROM users;
+Database is hosted on [Neon](https://neon.tech). No local PostgreSQL container needed.
+
+Connection string goes in `.env` as `DB_URL` with `?sslmode=require`.
+
+### Redis Usage
+
+Redis is used for:
+
+| Key pattern | Purpose | TTL |
+|---|---|---|
+| `otp:<email>` | Stores 6-digit OTP for email verification | 15 min |
+| `otp_attempts:<email>` | Tracks OTP verification attempts (max 5) | 15 min |
+| `otp_cooldown:<email>` | Prevents OTP resend spam | 60 sec |
+| `otp_resend_count:<email>` | Limits OTP resend cycles (max 5) | 1 hour |
+| `login_attempts:<username>` | Tracks failed login attempts (max 10) | 15 min |
+| `blacklisted_token:<jwt>` | Stores blacklisted JWT tokens after logout | JWT expiry (24h default) |
+
+## Security
+
+### Authentication
+
+- Stateless JWT (HS256) in `Authorization: Bearer <token>` header
+- BCrypt password hashing with cost factor 12
+- CSRF protection via double-submit cookie pattern for non-public endpoints
+- Logout invalidates JWT via Redis token blacklist
+
+### Rate Limiting
+
+- **Login**: 10 failed attempts per username → 15-minute lockout
+- **OTP verification**: 5 attempts per OTP code
+- **OTP resend**: 60-second cooldown between resends, max 5 resend cycles per hour
+
+### Password Policy
+
+- Minimum 8 characters
+- Requires uppercase, lowercase, digit, and special character
+- Password changes require `currentPassword` verification
+
+### Email Verification
+
+- Registration sends 6-digit OTP to email (async with 3 retries)
+- User must verify email before login is allowed
+- Changing email resets `emailVerified` and sends new OTP (sync)
+
+### Security Headers
+
+- `X-Frame-Options: DENY`
+- `Strict-Transport-Security: max-age=31536000; includeSubDomains`
+- `X-Content-Type-Options: nosniff`
+- `Content-Security-Policy: default-src 'self'`
+- `Permissions-Policy: geolocation=(), microphone=(), camera=()`
+- `Cache-Control: no-cache, no-store`
+- `Referrer-Policy: no-referrer`
+
+### Roles
+
+- `ROLE_USER` — standard user, created via `/users/register/public`
+- `ROLE_ADMIN` — admin, created via `/users/register/admin` (requires ADMIN role) or bootstrap on first startup
+
+## API Endpoints
+
+### Public (no auth required)
+
+| Method | Path | Description |
+|---|---|---|
+| POST | `/api/v1/users/register/public` | Register new user |
+| POST | `/api/v1/auth/login` | Login, returns JWT |
+| POST | `/api/v1/users/verify-email` | Verify email with OTP |
+| POST | `/api/v1/users/resend-otp` | Resend OTP |
+| GET | `/api/v1/csrf/public` | Get CSRF token |
+
+### Authenticated (Bearer token required)
+
+| Method | Path | Description |
+|---|---|---|
+| GET | `/api/v1/users/fetch` | Get current user profile |
+| PUT | `/api/v1/users/update` | Update user profile |
+| DELETE | `/api/v1/users/delete` | Delete current user |
+| POST | `/api/v1/auth/logout` | Logout (blacklists token) |
+
+### Admin only
+
+| Method | Path | Description |
+|---|---|---|
+| POST | `/api/v1/users/register/admin` | Register admin user |
+
+### Update User Request
+
+Password change requires `currentPassword`:
+
+```json
+{
+    "firstName": "John",
+    "lastName": "Doe",
+    "username": "john_doe",
+    "email": "john@example.com",
+    "currentPassword": "OldPassword@123",
+    "password": "NewPassword@456"
+}
 ```
+
+Omit `password` and `currentPassword` to update only profile fields.
 
 ## Database Schema
 
@@ -80,36 +167,23 @@ Flyway creates the `users` table in:
 
 - [`src/main/resources/db/migration/V1__user_schema.sql`](src/main/resources/db/migration/V1__user_schema.sql)
 
-That table includes:
-
-- `created_at`
-- `updated_at`
-- `email_verified`
-- `github_authorized`
-- `tier` constrained to `FREE` or `PRO`
+Columns: `id`, `first_name`, `middle_name`, `last_name`, `username`, `email`, `hashed_password`, `role`, `tier` (`FREE`/`PRO`), `email_verified`, `github_authorized`, `created_at`, `updated_at`.
 
 ## Run Flyway
 
-Set the database env vars in your shell first:
+Flyway runs automatically on application startup. To run manually:
 
 ```bash
-export DB_URL=jdbc:postgresql://localhost:5432/auth
-export DB_USERNAME=username
-export DB_PASSWORD=your_password
-```
-
-Then run Flyway from this module:
-
-```bash
-mvn -f services/auth-service/pom.xml flyway:info
-mvn -f services/auth-service/pom.xml flyway:validate
-mvn -f services/auth-service/pom.xml flyway:migrate
+DB_URL="jdbc:postgresql://<neon-host>/<dbname>?sslmode=require" \
+DB_USERNAME="neondb_owner" \
+DB_PASSWORD="your_password" \
+./mvnw flyway:migrate
 ```
 
 Useful commands:
-- `flyway:info` shows applied and pending migrations
-- `flyway:validate` checks migration consistency
-- `flyway:migrate` applies pending migrations
+- `flyway:info` — shows applied and pending migrations
+- `flyway:validate` — checks migration consistency
+- `flyway:migrate` — applies pending migrations
 
 ## Run the Service
 
@@ -125,7 +199,21 @@ Or from the repo root:
 mvn -f services/auth-service/pom.xml spring-boot:run
 ```
 
+## Admin Bootstrap
+
+On first startup, if no admin exists and env vars are set, an admin user is auto-created with `emailVerified=true`:
+
+```properties
+DEFAULT_ADMIN_FIRST_NAME=Admin
+DEFAULT_ADMIN_LAST_NAME=User
+DEFAULT_ADMIN_USERNAME=admin
+DEFAULT_ADMIN_EMAIL=admin@example.com
+DEFAULT_ADMIN_PASSWORD=SecurePassword@123
+```
+
 ## Notes
 
-- `createdAt` and `updatedAt` are handled in the backend by the entity lifecycle methods.
-- The service does not need database triggers for audit timestamps.
+- `createdAt` and `updatedAt` are handled by entity lifecycle methods.
+- Error messages are generic to prevent user/email enumeration.
+- OTP comparison uses timing-safe `MessageDigest.isEqual()`.
+- Async OTP email retries 3 times with exponential backoff. If all fail, user can call `/resend-otp`.

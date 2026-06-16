@@ -6,4 +6,8 @@ import com.atlas.auth_service.dto.LoginResponseDto;
 public interface IAuthService {
 
     LoginResponseDto login(LoginRequestDto loginRequestDto);
+
+    void logout(String token);
+
+    boolean isTokenBlacklisted(String token);
 }

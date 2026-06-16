@@ -11,11 +11,11 @@ public class PathsConfig {
     @Bean(name = "publicPaths")
     public List<String> publicPaths() {
         return List.of(
-                "/atlas/v1/csrf/public",
-                "/atlas/v1/auth/login",
-                "/atlas/v1/users/register/public",
-                "/atlas/v1/users/verify-email",
-                "/atlas/v1/users/resend-otp"
+                "/api/v1/csrf/public",
+                "/api/v1/auth/login",
+                "/api/v1/users/register/public",
+                "/api/v1/users/verify-email",
+                "/api/v1/users/resend-otp"
         );
     }
 
@@ -23,9 +23,10 @@ public class PathsConfig {
     @Bean(name = "securePaths")
     public List<String> securePaths() {
         return List.of(
-                "/atlas/v1/users/fetch",
-                "/atlas/v1/users/update",
-                "/atlas/v1/users/delete"
+                "/api/v1/users/fetch",
+                "/api/v1/users/update",
+                "/api/v1/users/delete",
+                "/api/v1/auth/logout"
         );
     }
 
@@ -33,7 +34,7 @@ public class PathsConfig {
     @Bean(name = "adminPaths")
     public List<String> adminPaths() {
         return List.of(
-                "/atlas/v1/users/register/admin"
+                "/api/v1/users/register/admin"
         );
     }
 }

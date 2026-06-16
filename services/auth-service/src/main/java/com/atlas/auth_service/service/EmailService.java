@@ -26,13 +26,28 @@ public class EmailService {
      * Async — used during registration. Does not block caller.
      * If sending fails, user can use /resend-otp.
      */
+    private static final int MAX_ASYNC_RETRIES = 3;
+    private static final long RETRY_DELAY_MS = 2000;
+
     @Async
     public void sendOtpEmailAsync(String toEmail, String otp) {
-        try {
-            doSendOtpEmail(toEmail, otp);
-        } catch (Exception e) {
-            log.error("Async OTP email failed for {}: ", toEmail, e);
+        for (int attempt = 1; attempt <= MAX_ASYNC_RETRIES; attempt++) {
+            try {
+                doSendOtpEmail(toEmail, otp);
+                return;
+            } catch (Exception e) {
+                log.error("Async OTP email attempt {}/{} failed for {}: ", attempt, MAX_ASYNC_RETRIES, toEmail, e);
+                if (attempt < MAX_ASYNC_RETRIES) {
+                    try {
+                        Thread.sleep(RETRY_DELAY_MS * attempt);
+                    } catch (InterruptedException ie) {
+                        Thread.currentThread().interrupt();
+                        return;
+                    }
+                }
+            }
         }
+        log.error("All {} async OTP email attempts failed for {}. User must use /resend-otp", MAX_ASYNC_RETRIES, toEmail);
     }
 
     /**

@@ -43,6 +43,7 @@ public class AuthServiceSecurityConfig {
                         .csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse())
                         .csrfTokenRequestHandler(requestHandler)
                         .ignoringRequestMatchers(publicPaths.toArray(String[]::new))
+                        .ignoringRequestMatchers("/api/v1/auth/logout")
                 )
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .headers(headers -> headers
@@ -54,6 +55,9 @@ public class AuthServiceSecurityConfig {
                         )
                         .cacheControl(cache -> {})
                         .referrerPolicy(referrer -> {})
+                        .contentSecurityPolicy(csp -> csp.policyDirectives("default-src 'self'"))
+                        .permissionsPolicy(permissions -> permissions
+                                .policy("geolocation=(), microphone=(), camera=()"))
                 )
                 .authorizeHttpRequests(requests -> {
                     publicPaths.forEach(path -> requests.requestMatchers(path).permitAll());

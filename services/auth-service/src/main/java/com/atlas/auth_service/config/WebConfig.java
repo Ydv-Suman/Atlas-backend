@@ -19,7 +19,7 @@ public class WebConfig implements WebMvcConfigurer {
      */
     @Override
     public void configurePathMatch(PathMatchConfigurer configurer) {
-        configurer.addPathPrefix("/atlas/v1", clazz -> true);
+        configurer.addPathPrefix("api/v1", clazz -> true);
     }
 
 }

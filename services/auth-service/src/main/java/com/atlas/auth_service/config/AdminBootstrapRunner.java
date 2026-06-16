@@ -1,9 +1,12 @@
 package com.atlas.auth_service.config;
 
+import com.atlas.auth_service.entity.AtlasUsers;
 import com.atlas.auth_service.entity.UserRole;
 import com.atlas.auth_service.dto.AdminRegisterRequestDto;
 import com.atlas.auth_service.service.IUserRegistrationService;
 import com.atlas.auth_service.repository.AtlasUserRespsitory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
@@ -58,6 +61,14 @@ public class AdminBootstrapRunner implements ApplicationRunner {
                 password,
                 password
         ));
+
+        atlasUserRespsitory.findByEmail(email).ifPresent(admin -> {
+            admin.setEmailVerified(true);
+            atlasUserRespsitory.save(admin);
+        });
+
+        LoggerFactory.getLogger(AdminBootstrapRunner.class)
+                .info("Bootstrap admin created with emailVerified=true");
     }
 
     private boolean hasBootstrapData() {
