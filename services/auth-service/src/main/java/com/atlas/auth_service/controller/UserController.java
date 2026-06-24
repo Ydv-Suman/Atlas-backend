@@ -32,7 +32,7 @@ public class UserController {
         this.userRegistrationService = userRegistrationService;
     }
 
-    @PostMapping("/register/public")
+    @PostMapping(value = "/register/public", version = "1.0")
     public ResponseEntity<ResponseDto> registerUser(@Valid @RequestBody RegisterRequestDto registerRequestDto) {
         userRegistrationService.registerUser(registerRequestDto);
         return ResponseEntity
@@ -41,7 +41,7 @@ public class UserController {
     }
 
     @PreAuthorize("hasRole('ADMIN')")
-    @PostMapping("/register/admin")
+    @PostMapping(value = "/register/admin", version = "1.0")
     public ResponseEntity<ResponseDto> registerAdminUser(@Valid @RequestBody AdminRegisterRequestDto adminRegisterRequestDto) {
         userRegistrationService.registerAdminUser(adminRegisterRequestDto);
         return ResponseEntity
@@ -49,7 +49,7 @@ public class UserController {
                 .body(new ResponseDto(AuthConstants.STATUS_201, AuthConstants.MESSAGE_201));
     }
 
-    @PostMapping("/verify-email")
+    @PostMapping(value = "/verify-email", version = "1.0")
     public ResponseEntity<ResponseDto> verifyEmail(@Valid @RequestBody VerifyEmailRequestDto verifyEmailRequestDto) {
         userRegistrationService.verifyEmail(verifyEmailRequestDto.email(), verifyEmailRequestDto.otp());
         return ResponseEntity
@@ -57,7 +57,7 @@ public class UserController {
                 .body(new ResponseDto(AuthConstants.STATUS_200, "Email verified successfully"));
     }
 
-    @PostMapping("/resend-otp")
+    @PostMapping(value = "/resend-otp", version = "1.0")
     public ResponseEntity<ResponseDto> resendOtp(@Valid @RequestBody ResendOtpRequestDto resendOtpRequestDto) {
         userRegistrationService.resendOtp(resendOtpRequestDto.email());
         return ResponseEntity
@@ -66,7 +66,7 @@ public class UserController {
     }
 
     @PreAuthorize("isAuthenticated()")
-    @GetMapping("/fetch")
+    @GetMapping(value = "/fetch", version = "1.0")
     public ResponseEntity<UserDto> getAuthenticatedUser(Authentication authentication) {
         return ResponseEntity
                 .status(HttpStatus.OK)
@@ -74,23 +74,23 @@ public class UserController {
     }
 
     @PreAuthorize("isAuthenticated()")
-    @PutMapping("/update")
+    @PutMapping(value = "/update", version = "1.0")
     public ResponseEntity<ResponseDto> updateUser(
             Authentication authentication,
             @Valid @RequestBody UpdateUserRequestDto updateUserRequestDto
     ) {
         boolean updated = userRegistrationService.updateUser(authentication.getName(), updateUserRequestDto);
         return ResponseEntity
-                .status(HttpStatus.OK)
-                .body(new ResponseDto(updated ? AuthConstants.STATUS_200 : AuthConstants.STATUS_417, updated ? AuthConstants.MESSAGE_200 : AuthConstants.MESSAGE_417_UPDATE));
+                .status(updated ? HttpStatus.NO_CONTENT : HttpStatus.EXPECTATION_FAILED)
+                .body(new ResponseDto(updated ? AuthConstants.STATUS_204 : AuthConstants.STATUS_417, updated ? AuthConstants.MESSAGE_204_UPDATE : AuthConstants.MESSAGE_417_UPDATE));
     }
 
     @PreAuthorize("isAuthenticated()")
-    @DeleteMapping("/delete")
+    @DeleteMapping(value = "/delete", version = "1.0")
     public ResponseEntity<ResponseDto> deleteUser(Authentication authentication) {
         boolean deleted = userRegistrationService.deleteUser(authentication.getName());
         return ResponseEntity
-                .status(HttpStatus.OK)
-                .body(new ResponseDto(deleted ? AuthConstants.STATUS_200 : AuthConstants.STATUS_417, deleted ? AuthConstants.MESSAGE_200 : AuthConstants.MESSAGE_417_DELETE));
+                .status(deleted ? HttpStatus.NO_CONTENT : HttpStatus.EXPECTATION_FAILED)
+                .body(new ResponseDto(deleted ? AuthConstants.STATUS_204 : AuthConstants.STATUS_417, deleted ? AuthConstants.MESSAGE_204_DELETE : AuthConstants.MESSAGE_417_DELETE));
     }
 }

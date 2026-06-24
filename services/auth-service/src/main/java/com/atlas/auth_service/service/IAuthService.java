@@ -10,4 +10,6 @@ public interface IAuthService {
     void logout(String token);
 
     boolean isTokenBlacklisted(String token);
+
+    void setGithubAuthorized(String email);
 }

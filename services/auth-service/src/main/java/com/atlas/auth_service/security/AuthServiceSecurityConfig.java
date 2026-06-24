@@ -43,7 +43,7 @@ public class AuthServiceSecurityConfig {
                         .csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse())
                         .csrfTokenRequestHandler(requestHandler)
                         .ignoringRequestMatchers(publicPaths.toArray(String[]::new))
-                        .ignoringRequestMatchers("/api/v1/auth/logout")
+                        .ignoringRequestMatchers("/api/users/delete", "/api/auth/logout")
                 )
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .headers(headers -> headers

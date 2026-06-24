@@ -1,5 +1,6 @@
 package com.atlas.auth_service.controller;
 
+import com.atlas.auth_service.Constants.AuthConstants;
 import com.atlas.auth_service.dto.LoginRequestDto;
 import com.atlas.auth_service.dto.LoginResponseDto;
 import com.atlas.auth_service.dto.ResponseDto;
@@ -12,6 +13,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
@@ -24,7 +26,7 @@ public class AuthController {
         this.authService = authService;
     }
 
-    @PostMapping("/login")
+    @PostMapping(value = "/login", version = "1.0")
     public ResponseEntity<LoginResponseDto> login(@Valid @RequestBody LoginRequestDto loginRequestDto) {
         return ResponseEntity
                 .status(HttpStatus.OK)
@@ -32,7 +34,7 @@ public class AuthController {
     }
 
     @PreAuthorize("isAuthenticated()")
-    @PostMapping("/logout")
+    @PostMapping(value = "/logout", version = "1.0")
     public ResponseEntity<ResponseDto> logout(HttpServletRequest request) {
         String authHeader = request.getHeader("Authorization");
         if (authHeader != null && authHeader.startsWith("Bearer ")) {
@@ -41,5 +43,17 @@ public class AuthController {
         return ResponseEntity
                 .status(HttpStatus.OK)
                 .body(new ResponseDto("200", "Logged out successfully"));
+    }
+
+    /**
+     * Internal endpoint — called by github-service after successful OAuth callback.
+     * Sets github_authorized=true for the user.
+     */
+    @PostMapping(value = "/github-authorized", version = "1.0")
+    public ResponseEntity<ResponseDto> setGithubAuthorized(@RequestParam("email") String email) {
+        authService.setGithubAuthorized(email);
+        return ResponseEntity
+                .status(HttpStatus.OK)
+                .body(new ResponseDto(AuthConstants.STATUS_200, "GitHub authorized successfully"));
     }
 }

@@ -1,4 +1,4 @@
-package com.atlas.auth_service.config;
+package com.atlas.github_service.config;
 
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.MediaType;
@@ -20,5 +20,4 @@ public class WebConfig implements WebMvcConfigurer {
                 .addSupportedVersions("1.0")
                 .setDefaultVersion("1.0");
     }
-
 }

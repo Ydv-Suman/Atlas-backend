@@ -87,4 +87,13 @@ public class AuthServiceImpl implements IAuthService {
     public boolean isTokenBlacklisted(String token) {
         return tokenBlacklistService.isBlacklisted(token);
     }
+
+    @Override
+    public void setGithubAuthorized(String email) {
+        AtlasUsers user = atlasUserRespsitory.findByEmail(email)
+                .orElseThrow(() -> new InvalidCredentialsException("User not found with email: " + email));
+        user.setGithubAuthorized(true);
+        atlasUserRespsitory.save(user);
+        log.info("GitHub authorized for user: {}", email);
+    }
 }

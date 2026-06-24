@@ -11,11 +11,12 @@ public class PathsConfig {
     @Bean(name = "publicPaths")
     public List<String> publicPaths() {
         return List.of(
-                "/api/v1/csrf/public",
-                "/api/v1/auth/login",
-                "/api/v1/users/register/public",
-                "/api/v1/users/verify-email",
-                "/api/v1/users/resend-otp"
+                "/api/csrf/public",
+                "/api/auth/login",
+                "/api/users/register/public",
+                "/api/users/verify-email",
+                "/api/users/resend-otp",
+                "/api/auth/github-authorized"
         );
     }
 
@@ -23,10 +24,10 @@ public class PathsConfig {
     @Bean(name = "securePaths")
     public List<String> securePaths() {
         return List.of(
-                "/api/v1/users/fetch",
-                "/api/v1/users/update",
-                "/api/v1/users/delete",
-                "/api/v1/auth/logout"
+                "/api/users/fetch",
+                "/api/users/update",
+                "/api/users/delete",
+                "/api/auth/logout"
         );
     }
 
@@ -34,7 +35,7 @@ public class PathsConfig {
     @Bean(name = "adminPaths")
     public List<String> adminPaths() {
         return List.of(
-                "/api/v1/users/register/admin"
+                "/api/users/register/admin"
         );
     }
 }

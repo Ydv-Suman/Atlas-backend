@@ -138,6 +138,12 @@ Redis is used for:
 | DELETE | `/api/v1/users/delete` | Delete current user |
 | POST | `/api/v1/auth/logout` | Logout (blacklists token) |
 
+### Internal (service-to-service, no auth required)
+
+| Method | Path | Description |
+|---|---|---|
+| POST | `/api/auth/github-authorized?email={email}` | Set `github_authorized=true` for user. Called by github-service after OAuth callback. |
+
 ### Admin only
 
 | Method | Path | Description |
@@ -209,6 +215,36 @@ DEFAULT_ADMIN_LAST_NAME=User
 DEFAULT_ADMIN_USERNAME=admin
 DEFAULT_ADMIN_EMAIL=admin@example.com
 DEFAULT_ADMIN_PASSWORD=SecurePassword@123
+```
+
+## Workflow
+
+### Registration → Login Flow
+
+```
+1. POST /api/users/register/public     → 201 (async OTP email sent)
+2. POST /api/users/verify-email        → 200 (email_verified=true)
+3. POST /api/auth/login                → 200 + JWT token
+4. Use JWT in Authorization: Bearer <token> for all authenticated endpoints
+```
+
+### GitHub Authorization Flow (cross-service)
+
+```
+1. User completes registration + email verification above
+2. github-service handles OAuth flow (see github-service README)
+3. github-service calls POST /api/auth/github-authorized?email=user@example.com
+4. auth-service sets github_authorized=true on user record
+5. User now passes onboarding gate (email_verified + github_authorized)
+```
+
+### Account Update Flow
+
+```
+Profile only:  PUT /api/users/update  { "firstName": "New" }
+Email change:  PUT /api/users/update  { "email": "new@mail.com" }
+               → resets emailVerified, sends new OTP, must re-verify
+Password:      PUT /api/users/update  { "currentPassword": "old", "password": "new" }
 ```
 
 ## Notes

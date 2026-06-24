@@ -12,15 +12,19 @@ services:
       - "6379:6379"
 
   atlasauthservice:
-    image: "sumanydv/auth-service:v1"
-    container_name: "atlasauth-service"
+    image: "sumanydv/atlas-auth-service:v1"
+    container_name: "atlas-auth-service"
     ports:
       - "8090:8090"
     depends_on:
       redis:
         condition: service_healthy
     env_file:
-      - .env
+      - ../services/auth-service/.env
     environment:
       REDIS_HOST: "redis"
       REDIS_PORT: "6379"
+
+networks:
+  atlas-network:
+    driver: bridge
