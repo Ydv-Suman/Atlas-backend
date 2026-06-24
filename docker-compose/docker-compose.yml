@@ -10,6 +10,9 @@ services:
       start_period: 10s
     ports:
       - "6379:6379"
+    extends:
+      file: common-config.yml
+      service: network-deploy-service
 
   atlasauthservice:
     image: "sumanydv/atlas-auth-service:v1"
@@ -24,6 +27,25 @@ services:
     environment:
       REDIS_HOST: "redis"
       REDIS_PORT: "6379"
+    extends:
+      file: common-config.yml
+      service: microservice-base-config
+
+  atlasgithubservice:
+    image: "sumanydv/atlas-github-service:v1"
+    container_name: "atlas-github-service"
+    ports:
+      - "9000:9000"
+    depends_on:
+      atlasauthservice:
+        condition: service_started
+    env_file:
+      - ../services/github-service/.env
+    environment:
+      AUTH_SERVICE_URL: "http://atlasauthservice:8090"
+    extends:
+      file: common-config.yml
+      service: microservice-base-config
 
 networks:
   atlas-network:

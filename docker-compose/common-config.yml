@@ -1,0 +1,14 @@
+services:
+  network-deploy-service:
+    networks:
+      - atlas-network
+
+  microservice-base-config:
+    extends:
+      service: network-deploy-service
+    deploy:
+      resources:
+        limits:
+          memory: 700m
+    environment:
+      JAVA_TOOL_OPTIONS: "-Xmx256m -Xms128m"
