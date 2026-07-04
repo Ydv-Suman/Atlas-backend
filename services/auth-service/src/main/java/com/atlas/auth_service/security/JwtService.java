@@ -1,43 +1,71 @@
 package com.atlas.auth_service.security;
 
 import com.atlas.auth_service.entity.AtlasUsers;
-import io.jsonwebtoken.Claims;
-import io.jsonwebtoken.JwtException;
+import com.atlas.shared.security.JwtTokenParser;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 import javax.crypto.SecretKey;
+import java.nio.charset.StandardCharsets;
 import java.util.Base64;
 import java.util.Date;
 import java.util.List;
 
+/**
+ * Auth-service only — generates JWT tokens with full claims.
+ * Parsing/validation delegated to shared-lib JwtTokenParser.
+ */
 @Component
 public class JwtService {
 
-    private static final Logger log = LoggerFactory.getLogger(JwtService.class);
     private static final int MINIMUM_KEY_BYTES = 32;
 
     private final SecretKey signingKey;
     private final long expirationMs;
+    private final JwtTokenParser tokenParser;
 
     public JwtService(
             @Value("${app.jwt.secret}") String secret,
-            @Value("${app.jwt.expiration-ms}") long expirationMs
+            @Value("${app.jwt.expiration-ms}") long expirationMs,
+            JwtTokenParser tokenParser
     ) {
         this.signingKey = resolveSigningKey(secret);
         this.expirationMs = expirationMs;
+        this.tokenParser = tokenParser;
     }
 
-    private SecretKey resolveSigningKey(String secret) {
+    public String generateToken(AtlasUsers user) {
+        Date now = new Date();
+        Date expiryDate = new Date(now.getTime() + expirationMs);
+
+        return Jwts.builder()
+                .subject(user.getUsername())
+                .claim("roles", List.of(user.getRole().name()))
+                .claim("emailVerified", user.isEmailVerified())
+                .claim("githubAuthorized", user.isGithubAuthorized())
+                .claim("tier", user.getTier().name())
+                .issuedAt(now)
+                .expiration(expiryDate)
+                .signWith(signingKey)
+                .compact();
+    }
+
+    public String extractUsername(String token) {
+        return tokenParser.extractSubject(token);
+    }
+
+    public boolean isTokenValid(String token) {
+        return tokenParser.isValid(token);
+    }
+
+    private static SecretKey resolveSigningKey(String secret) {
         byte[] keyBytes;
         try {
             keyBytes = Base64.getDecoder().decode(secret);
         } catch (IllegalArgumentException e) {
-            keyBytes = secret.getBytes(java.nio.charset.StandardCharsets.UTF_8);
+            keyBytes = secret.getBytes(StandardCharsets.UTF_8);
         }
         if (keyBytes.length < MINIMUM_KEY_BYTES) {
             throw new IllegalArgumentException(
@@ -47,48 +75,5 @@ public class JwtService {
             );
         }
         return Keys.hmacShaKeyFor(keyBytes);
-    }
-
-    public String generateToken(AtlasUsers atlasUsers) {
-        Date now = new Date();
-        Date expiryDate = new Date(now.getTime() + expirationMs);
-
-        return Jwts.builder()
-                .subject(atlasUsers.getUsername())
-                .claim("roles", List.of(atlasUsers.getRole().name()))
-                .issuedAt(now)
-                .expiration(expiryDate)
-                .signWith(signingKey)
-                .compact();
-    }
-
-    public String extractUsername(String token) {
-        return parseClaims(token).getSubject();
-    }
-
-    public String extractRole(String token) {
-        @SuppressWarnings("unchecked")
-        List<String> roles = parseClaims(token).get("roles", List.class);
-        return (roles != null && !roles.isEmpty()) ? roles.getFirst() : null;
-    }
-
-    public boolean isTokenValid(String token) {
-        try {
-            Claims claims = parseClaims(token);
-            return claims.getSubject() != null
-                    && claims.getExpiration() != null
-                    && claims.getExpiration().after(new Date());
-        } catch (JwtException | IllegalArgumentException e) {
-            log.debug("Invalid JWT token: {}", e.getMessage());
-            return false;
-        }
-    }
-
-    private Claims parseClaims(String token) {
-        return Jwts.parser()
-                .verifyWith(signingKey)
-                .build()
-                .parseSignedClaims(token)
-                .getPayload();
     }
 }
