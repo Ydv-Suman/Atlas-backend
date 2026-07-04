@@ -2,19 +2,19 @@ package com.atlas.github_service.controller;
 
 import com.atlas.github_service.constants.GithubConstants;
 import com.atlas.github_service.dto.AuthorizeResponseDto;
-import com.atlas.github_service.dto.ResponseDto;
+import com.atlas.shared.dto.ApiResponse;
+import com.atlas.shared.security.JwtClaims;
 import com.atlas.github_service.service.IGithubService;
 import com.atlas.github_service.service.client.AuthFeignClient;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
-
-import jakarta.servlet.http.HttpServletRequest;
 
 @RestController
 @RequestMapping("/github")
@@ -29,16 +29,11 @@ public class GithubController {
      * Returns GitHub authorization URL for the user to open in browser.
      */
     @PostMapping(value = "/authorize", version = "1.0")
-    public ResponseEntity<AuthorizeResponseDto> authorize(HttpServletRequest request) {
-        // TODO: Extract userId and email from JWT when security is wired up.
-        // For now, accept as headers for testing.
-        String userId = request.getHeader("X-User-Id");
-        String email = request.getHeader("X-User-Email");
-        if (userId == null || userId.isBlank() || email == null || email.isBlank()) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
-        }
+    public ResponseEntity<AuthorizeResponseDto> authorize(Authentication authentication) {
+        JwtClaims claims = (JwtClaims) authentication.getDetails();
+        String email = claims.email();
 
-        return ResponseEntity.ok(githubService.buildAuthorizationUrl(userId, email));
+        return ResponseEntity.ok(githubService.buildAuthorizationUrl(email));
     }
 
     /**
@@ -46,11 +41,11 @@ public class GithubController {
      * Exchanges code for token, stores encrypted token, marks user as github_authorized.
      */
     @GetMapping(value = "/callback")
-    public ResponseEntity<ResponseDto> callback(
+    public ResponseEntity<ApiResponse<Void>> callback(
             @RequestParam("code") String code,
             @RequestParam("state") String state
     ) {
-        String githubUsername = githubService.handleCallback(code, state);
+        githubService.handleCallback(code, state);
 
         // Extract email from state to notify auth-service
         String email = githubService.getEmailFromState(state);
@@ -58,6 +53,6 @@ public class GithubController {
 
         return ResponseEntity
                 .status(HttpStatus.OK)
-                .body(new ResponseDto(GithubConstants.STATUS_200, GithubConstants.MESSAGE_200_CALLBACK));
+                .body(ApiResponse.success(GithubConstants.STATUS_200, GithubConstants.MESSAGE_200_CALLBACK));
     }
 }

@@ -36,11 +36,11 @@ public class GithubServiceImpl implements IGithubService {
 
     /**
      * Step 1: Build GitHub authorization URL.
-     * Encodes userId and email into the state parameter with HMAC signature for CSRF protection.
+     * Encodes email into the state parameter with HMAC signature for CSRF protection.
      */
     @Override
-    public AuthorizeResponseDto buildAuthorizationUrl(String userId, String email) {
-        String state = generateState(userId, email);
+    public AuthorizeResponseDto buildAuthorizationUrl(String email) {
+        String state = generateState(email);
 
         String url = GITHUB_AUTHORIZE_URL
                 + "?client_id=" + oauthConfig.getClientId()
@@ -58,8 +58,8 @@ public class GithubServiceImpl implements IGithubService {
      */
     @Override
     public String handleCallback(String code, String state) {
-        // Verify state and extract userId
-        String userId = verifyAndExtractUserId(state);
+        // Verify state and extract email
+        String email = verifyAndExtractEmail(state);
 
         // Exchange authorization code for access token
         GithubTokenResponse tokenResponse = exchangeCodeForToken(code);
@@ -68,7 +68,7 @@ public class GithubServiceImpl implements IGithubService {
         GithubUserResponse userResponse = fetchGithubUser(tokenResponse.accessToken());
 
         // Encrypt and store the connection
-        saveConnection(userId, userResponse.login(), tokenResponse.accessToken(), tokenResponse.scope());
+        saveConnection(email, userResponse.login(), tokenResponse.accessToken(), tokenResponse.scope());
 
         return userResponse.login();
     }
@@ -133,22 +133,22 @@ public class GithubServiceImpl implements IGithubService {
     public String getEmailFromState(String encodedState) {
         String decoded = new String(Base64.getUrlDecoder().decode(encodedState), StandardCharsets.UTF_8);
         String[] parts = decoded.split("\\|");
-        return parts[1]; // email is second field
+        return parts[0]; // email is first field
     }
 
     /**
-     * State format: base64url(userId|email|timestamp|hmac)
+     * State format: base64url(email|timestamp|hmac)
      * HMAC prevents tampering. Timestamp prevents replay.
      */
-    private String generateState(String userId, String email) {
+    private String generateState(String email) {
         long timestamp = Instant.now().getEpochSecond();
-        String payload = userId + "|" + email + "|" + timestamp;
+        String payload = email + "|" + timestamp;
         String signature = hmacSha256(payload);
         String state = payload + "|" + signature;
         return Base64.getUrlEncoder().withoutPadding().encodeToString(state.getBytes(StandardCharsets.UTF_8));
     }
 
-    private String verifyAndExtractUserId(String encodedState) {
+    private String verifyAndExtractEmail(String encodedState) {
         String decoded;
         try {
             decoded = new String(Base64.getUrlDecoder().decode(encodedState), StandardCharsets.UTF_8);
@@ -157,16 +157,16 @@ public class GithubServiceImpl implements IGithubService {
         }
 
         String[] parts = decoded.split("\\|");
-        if (parts.length != 4) {
+        if (parts.length != 3) {
             throw new RuntimeException("Invalid state format");
         }
 
-        String userId = parts[0];
-        long timestamp = Long.parseLong(parts[2]);
-        String signature = parts[3];
+        String email = parts[0];
+        long timestamp = Long.parseLong(parts[1]);
+        String signature = parts[2];
 
         // Verify HMAC
-        String payload = userId + "|" + parts[1] + "|" + timestamp;
+        String payload = email + "|" + timestamp;
         String expectedSignature = hmacSha256(payload);
         if (!expectedSignature.equals(signature)) {
             throw new RuntimeException("State signature verification failed");
@@ -177,7 +177,7 @@ public class GithubServiceImpl implements IGithubService {
             throw new RuntimeException("State parameter expired");
         }
 
-        return userId;
+        return email;
     }
 
     private String hmacSha256(String data) {

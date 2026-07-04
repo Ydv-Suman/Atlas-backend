@@ -4,7 +4,7 @@ import com.atlas.auth_service.Constants.AuthConstants;
 import com.atlas.auth_service.dto.AdminRegisterRequestDto;
 import com.atlas.auth_service.dto.RegisterRequestDto;
 import com.atlas.auth_service.dto.ResendOtpRequestDto;
-import com.atlas.auth_service.dto.ResponseDto;
+import com.atlas.shared.dto.ApiResponse;
 import com.atlas.auth_service.dto.UpdateUserRequestDto;
 import com.atlas.auth_service.dto.UserDto;
 import com.atlas.auth_service.dto.VerifyEmailRequestDto;
@@ -33,36 +33,36 @@ public class UserController {
     }
 
     @PostMapping(value = "/register/public", version = "1.0")
-    public ResponseEntity<ResponseDto> registerUser(@Valid @RequestBody RegisterRequestDto registerRequestDto) {
+    public ResponseEntity<ApiResponse<Void>> registerUser(@Valid @RequestBody RegisterRequestDto registerRequestDto) {
         userRegistrationService.registerUser(registerRequestDto);
         return ResponseEntity
                 .status(HttpStatus.CREATED)
-                .body(new ResponseDto(AuthConstants.STATUS_201, AuthConstants.MESSAGE_201));
+                .body(ApiResponse.success(AuthConstants.STATUS_201, AuthConstants.MESSAGE_201));
     }
 
     @PreAuthorize("hasRole('ADMIN')")
     @PostMapping(value = "/register/admin", version = "1.0")
-    public ResponseEntity<ResponseDto> registerAdminUser(@Valid @RequestBody AdminRegisterRequestDto adminRegisterRequestDto) {
+    public ResponseEntity<ApiResponse<Void>> registerAdminUser(@Valid @RequestBody AdminRegisterRequestDto adminRegisterRequestDto) {
         userRegistrationService.registerAdminUser(adminRegisterRequestDto);
         return ResponseEntity
                 .status(HttpStatus.CREATED)
-                .body(new ResponseDto(AuthConstants.STATUS_201, AuthConstants.MESSAGE_201));
+                .body(ApiResponse.success(AuthConstants.STATUS_201, AuthConstants.MESSAGE_201));
     }
 
     @PostMapping(value = "/verify-email", version = "1.0")
-    public ResponseEntity<ResponseDto> verifyEmail(@Valid @RequestBody VerifyEmailRequestDto verifyEmailRequestDto) {
+    public ResponseEntity<ApiResponse<Void>> verifyEmail(@Valid @RequestBody VerifyEmailRequestDto verifyEmailRequestDto) {
         userRegistrationService.verifyEmail(verifyEmailRequestDto.email(), verifyEmailRequestDto.otp());
         return ResponseEntity
                 .status(HttpStatus.OK)
-                .body(new ResponseDto(AuthConstants.STATUS_200, "Email verified successfully"));
+                .body(ApiResponse.success(AuthConstants.STATUS_200, "Email verified successfully"));
     }
 
     @PostMapping(value = "/resend-otp", version = "1.0")
-    public ResponseEntity<ResponseDto> resendOtp(@Valid @RequestBody ResendOtpRequestDto resendOtpRequestDto) {
+    public ResponseEntity<ApiResponse<Void>> resendOtp(@Valid @RequestBody ResendOtpRequestDto resendOtpRequestDto) {
         userRegistrationService.resendOtp(resendOtpRequestDto.email());
         return ResponseEntity
                 .status(HttpStatus.OK)
-                .body(new ResponseDto(AuthConstants.STATUS_200, "OTP sent successfully"));
+                .body(ApiResponse.success(AuthConstants.STATUS_200, "OTP sent successfully"));
     }
 
     @PreAuthorize("isAuthenticated()")
@@ -75,22 +75,22 @@ public class UserController {
 
     @PreAuthorize("isAuthenticated()")
     @PutMapping(value = "/update", version = "1.0")
-    public ResponseEntity<ResponseDto> updateUser(
+    public ResponseEntity<ApiResponse<Void>> updateUser(
             Authentication authentication,
             @Valid @RequestBody UpdateUserRequestDto updateUserRequestDto
     ) {
         boolean updated = userRegistrationService.updateUser(authentication.getName(), updateUserRequestDto);
         return ResponseEntity
                 .status(updated ? HttpStatus.NO_CONTENT : HttpStatus.EXPECTATION_FAILED)
-                .body(new ResponseDto(updated ? AuthConstants.STATUS_204 : AuthConstants.STATUS_417, updated ? AuthConstants.MESSAGE_204_UPDATE : AuthConstants.MESSAGE_417_UPDATE));
+                .body(ApiResponse.success(updated ? AuthConstants.STATUS_204 : AuthConstants.STATUS_417, updated ? AuthConstants.MESSAGE_204_UPDATE : AuthConstants.MESSAGE_417_UPDATE));
     }
 
     @PreAuthorize("isAuthenticated()")
     @DeleteMapping(value = "/delete", version = "1.0")
-    public ResponseEntity<ResponseDto> deleteUser(Authentication authentication) {
+    public ResponseEntity<ApiResponse<Void>> deleteUser(Authentication authentication) {
         boolean deleted = userRegistrationService.deleteUser(authentication.getName());
         return ResponseEntity
                 .status(deleted ? HttpStatus.NO_CONTENT : HttpStatus.EXPECTATION_FAILED)
-                .body(new ResponseDto(deleted ? AuthConstants.STATUS_204 : AuthConstants.STATUS_417, deleted ? AuthConstants.MESSAGE_204_DELETE : AuthConstants.MESSAGE_417_DELETE));
+                .body(ApiResponse.success(deleted ? AuthConstants.STATUS_204 : AuthConstants.STATUS_417, deleted ? AuthConstants.MESSAGE_204_DELETE : AuthConstants.MESSAGE_417_DELETE));
     }
 }
