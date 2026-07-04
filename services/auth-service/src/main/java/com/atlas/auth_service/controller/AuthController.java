@@ -3,7 +3,7 @@ package com.atlas.auth_service.controller;
 import com.atlas.auth_service.Constants.AuthConstants;
 import com.atlas.auth_service.dto.LoginRequestDto;
 import com.atlas.auth_service.dto.LoginResponseDto;
-import com.atlas.auth_service.dto.ResponseDto;
+import com.atlas.shared.dto.ApiResponse;
 import com.atlas.auth_service.service.IAuthService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
@@ -35,14 +35,14 @@ public class AuthController {
 
     @PreAuthorize("isAuthenticated()")
     @PostMapping(value = "/logout", version = "1.0")
-    public ResponseEntity<ResponseDto> logout(HttpServletRequest request) {
+    public ResponseEntity<ApiResponse<Void>> logout(HttpServletRequest request) {
         String authHeader = request.getHeader("Authorization");
         if (authHeader != null && authHeader.startsWith("Bearer ")) {
             authService.logout(authHeader.substring(7));
         }
         return ResponseEntity
                 .status(HttpStatus.OK)
-                .body(new ResponseDto("200", "Logged out successfully"));
+                .body(ApiResponse.success("200", "Logged out successfully"));
     }
 
     /**
@@ -50,10 +50,10 @@ public class AuthController {
      * Sets github_authorized=true for the user.
      */
     @PostMapping(value = "/github-authorized", version = "1.0")
-    public ResponseEntity<ResponseDto> setGithubAuthorized(@RequestParam("email") String email) {
+    public ResponseEntity<ApiResponse<Void>> setGithubAuthorized(@RequestParam("email") String email) {
         authService.setGithubAuthorized(email);
         return ResponseEntity
                 .status(HttpStatus.OK)
-                .body(new ResponseDto(AuthConstants.STATUS_200, "GitHub authorized successfully"));
+                .body(ApiResponse.success(AuthConstants.STATUS_200, "GitHub authorized successfully"));
     }
 }

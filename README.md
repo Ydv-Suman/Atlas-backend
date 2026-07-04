@@ -35,9 +35,9 @@ Flutter App (iOS / Android)
 
 | Layer          | Technology                                                  |
 |----------------|-------------------------------------------------------------|
-| Language       | Java 21                                                     |
-| Framework      | Spring Boot 3, Spring Security, Spring Data JPA             |
-| Build          | Maven multi-module                                          |
+| Language       | Java 25                                                     |
+| Framework      | Spring Boot 4.1, Spring Security, Spring Data JPA           |
+| Build          | Maven multi-module (parent POM + shared-lib)                |
 | Database       | PostgreSQL + pgvector                                       |
 | Cache          | Redis                                                       |
 | Auth           | Stateless JWT + CSRF cookie protection, BCrypt(12)          |
@@ -91,7 +91,7 @@ Register → Email OTP sent → Verify email → Free credits granted
 
 ## Prerequisites
 
-- Java 21
+- Java 25
 - Maven 3.9+
 - Docker
 - PostgreSQL 16+
@@ -106,37 +106,32 @@ Register → Email OTP sent → Verify email → Free credits granted
    ```
 
 2. **Set up environment variables**
+
+   Each service has its own `.env` file:
    ```bash
-   cp .env.example .env
-   # Fill in: DB_URL, DB_USERNAME, DB_PASSWORD, REDIS_HOST, REDIS_PORT,
-   #          JWT_SECRET, JWT_EXPIRATION_MS, MAIL_HOST, MAIL_PORT,
-   #          MAIL_USERNAME, MAIL_PASSWORD
+   cp services/auth-service/.env.example services/auth-service/.env
+   cp services/github-service/.env.example services/github-service/.env
+   ```
+   Required variables per service:
+   - **All services**: `JWT_SECRET` (must be identical across services)
+   - **auth-service**: `DB_URL`, `DB_USERNAME`, `DB_PASSWORD`, `REDIS_HOST`, `REDIS_PORT`, `JWT_EXPIRATION_MS`, `MAIL_HOST`, `MAIL_PORT`, `MAIL_USERNAME`, `MAIL_PASSWORD`
+   - **github-service**: `DB_URL`, `DB_USERNAME`, `DB_PASSWORD`, `GITHUB_CLIENT_ID`, `GITHUB_CLIENT_SECRET`, `ENCRYPTION_KEY`, `AUTH_SERVICE_URL`
+
+3. **Build all modules from root**
+   ```bash
+   mvn compile
+   ```
+   Builds in order: shared-lib → auth-service → github-service.
+
+4. **Start infrastructure with Docker Compose**
+   ```bash
+   docker-compose -f docker-compose/docker-compose.yml up -d
    ```
 
-3. **Start infrastructure with Docker Compose**
+5. **Run a single service locally** (requires infrastructure from step 4)
    ```bash
    cd services/auth-service
-   docker-compose up -d
-   ```
-   Starts PostgreSQL, Redis, and auth-service. Requires `.env` file for secrets (JWT, mail credentials).
-
-   To run only infrastructure (database + Redis) without the service:
-   ```bash
-   docker-compose up -d authdb redis
-   ```
-
-4. **Build Docker image (Jib)**
-   ```bash
-   cd services/auth-service
-   mvn compile jib:dockerBuild
-   ```
-   Builds image to local Docker daemon (`sumanydv/auth-service:v1`). No Dockerfile needed.
-
-5. **Run locally without Docker** (requires infrastructure from step 3)
-   ```bash
-   cd services/auth-service
-   ./mvnw package -DskipTests
-   java -jar target/*.jar
+   mvn spring-boot:run
    ```
 
 ## Project Phases
