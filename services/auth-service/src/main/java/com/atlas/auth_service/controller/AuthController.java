@@ -1,6 +1,5 @@
 package com.atlas.auth_service.controller;
 
-import com.atlas.auth_service.Constants.AuthConstants;
 import com.atlas.auth_service.dto.LoginRequestDto;
 import com.atlas.auth_service.dto.LoginResponseDto;
 import com.atlas.shared.dto.ApiResponse;
@@ -13,7 +12,6 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
@@ -45,15 +43,4 @@ public class AuthController {
                 .body(ApiResponse.success("200", "Logged out successfully"));
     }
 
-    /**
-     * Internal endpoint — called by github-service after successful OAuth callback.
-     * Sets github_authorized=true for the user.
-     */
-    @PostMapping(value = "/github-authorized", version = "1.0")
-    public ResponseEntity<ApiResponse<Void>> setGithubAuthorized(@RequestParam("email") String email) {
-        authService.setGithubAuthorized(email);
-        return ResponseEntity
-                .status(HttpStatus.OK)
-                .body(ApiResponse.success(AuthConstants.STATUS_200, "GitHub authorized successfully"));
-    }
 }

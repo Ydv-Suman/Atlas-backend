@@ -1,4 +1,4 @@
-package com.atlas.github_service.dto;
+package com.atlas.auth_service.dto;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 

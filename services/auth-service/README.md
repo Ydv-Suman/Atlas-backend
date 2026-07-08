@@ -25,6 +25,9 @@ MAIL_HOST=smtp.gmail.com
 MAIL_PORT=587
 MAIL_USERNAME=your_email@gmail.com
 MAIL_PASSWORD=your_app_password
+GITHUB_CLIENT_ID=your_github_oauth_client_id
+GITHUB_CLIENT_SECRET=your_github_oauth_client_secret
+ENCRYPTION_KEY=your_hex_encryption_key
 ```
 
 `application.yml` reads these values from environment variables or from `.env`:
@@ -138,11 +141,12 @@ Redis is used for:
 | DELETE | `/api/v1/users/delete` | Delete current user |
 | POST | `/api/v1/auth/logout` | Logout (blacklists token) |
 
-### Internal (service-to-service, no auth required)
+### GitHub OAuth (mixed auth)
 
 | Method | Path | Description |
 |---|---|---|
-| POST | `/api/auth/github-authorized?email={email}` | Set `github_authorized=true` for user. Called by github-service after OAuth callback. |
+| POST | `/api/v1/github/authorize` | Returns GitHub OAuth authorization URL. Requires Bearer token. |
+| GET | `/api/github/callback` | GitHub OAuth callback. Public — receives code + state from GitHub redirect. |
 
 ### Admin only
 
@@ -169,11 +173,10 @@ Omit `password` and `currentPassword` to update only profile fields.
 
 ## Database Schema
 
-Flyway creates the `users` table in:
+Flyway manages schema migrations in `src/main/resources/db/migration/`:
 
-- [`src/main/resources/db/migration/V1__user_schema.sql`](src/main/resources/db/migration/V1__user_schema.sql)
-
-Columns: `id`, `first_name`, `middle_name`, `last_name`, `username`, `email`, `hashed_password`, `role`, `tier` (`FREE`/`PRO`), `email_verified`, `github_authorized`, `created_at`, `updated_at`.
+- `v1__create_user_schema.sql` — `users` table: `id`, `first_name`, `middle_name`, `last_name`, `username`, `email`, `hashed_password`, `role`, `tier`, `email_verified`, `github_authorized`, `created_at`, `updated_at`
+- `v2__create_github_connections.sql` — `github_connections` table: `id`, `user_id`, `github_username`, `encrypted_access_token`, `scope`, `authorized_at`
 
 ## Run Flyway
 
@@ -228,14 +231,15 @@ DEFAULT_ADMIN_PASSWORD=SecurePassword@123
 4. Use JWT in Authorization: Bearer <token> for all authenticated endpoints
 ```
 
-### GitHub Authorization Flow (cross-service)
+### GitHub Authorization Flow
 
 ```
 1. User completes registration + email verification above
-2. github-service handles OAuth flow (see github-service README)
-3. github-service calls POST /api/auth/github-authorized?email=user@example.com
-4. auth-service sets github_authorized=true on user record
-5. User now passes onboarding gate (email_verified + github_authorized)
+2. POST /api/v1/github/authorize (with JWT) → returns GitHub OAuth URL
+3. User opens URL → logs into GitHub → clicks Authorize
+4. GitHub redirects to GET /api/github/callback?code=...&state=...
+5. auth-service exchanges code for token, stores encrypted token, sets github_authorized=true
+6. User now passes onboarding gate (email_verified + github_authorized)
 ```
 
 ### Account Update Flow
