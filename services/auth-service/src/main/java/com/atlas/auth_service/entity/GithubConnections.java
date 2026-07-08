@@ -1,4 +1,4 @@
-package com.atlas.github_service.entity;
+package com.atlas.auth_service.entity;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -28,22 +28,21 @@ public class GithubConnections {
     @Column(name = "user_id", nullable = false)
     private String userId;
 
-    @Size(max=50)
+    @Size(max = 50)
     @NotNull
     @Column(name = "github_username", nullable = false)
     private String githubUsername;
 
-    @Size(max=255)
+    @Size(max = 255)
     @NotNull
     @Column(name = "encrypted_access_token", nullable = false)
     private String encryptedAccessToken;
 
-    @Size(max=255)
+    @Size(max = 255)
     @NotNull
-    @Column(name="scope", nullable = false)
+    @Column(name = "scope", nullable = false)
     private String scope;
 
-    @Column(name="authorized_at", nullable = false)
+    @Column(name = "authorized_at", nullable = false)
     private Instant authorizedAt;
-
 }

@@ -27,7 +27,6 @@
     <modules>
         <module>shared-lib</module>
         <module>services/auth-service</module>
-        <module>services/github-service</module>
     </modules>
 
     <dependencyManagement>

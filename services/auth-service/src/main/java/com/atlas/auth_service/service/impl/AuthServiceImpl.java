@@ -89,11 +89,11 @@ public class AuthServiceImpl implements IAuthService {
     }
 
     @Override
-    public void setGithubAuthorized(String email) {
-        AtlasUsers user = atlasUserRespsitory.findByEmail(email)
-                .orElseThrow(() -> new InvalidCredentialsException("User not found with email: " + email));
+    public void setGithubAuthorized(String username) {
+        AtlasUsers user = atlasUserRespsitory.findByUsername(username)
+                .orElseThrow(() -> new InvalidCredentialsException("User not found with username: " + username));
         user.setGithubAuthorized(true);
         atlasUserRespsitory.save(user);
-        log.info("GitHub authorized for user: {}", email);
+        log.info("GitHub authorized for user: {}", username);
     }
 }

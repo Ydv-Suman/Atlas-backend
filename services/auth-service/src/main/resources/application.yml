@@ -31,11 +31,19 @@ spring:
           auth: true
           starttls:
             enable: true
+  flyway:
+    baseline-on-migrate: true
+
 app:
   jwt:
     secret: ${JWT_SECRET}
     expiration-ms: ${JWT_EXPIRATION_MS}
   otp:
     from-email: ${MAIL_USERNAME}
-
-
+  github:
+    client-id: ${GITHUB_CLIENT_ID}
+    client-secret: ${GITHUB_CLIENT_SECRET}
+    redirect-uri: ${GITHUB_REDIRECT_URI:http://localhost:8090/api/github/callback}
+    scopes: repo,read:user,workflow
+  encryption:
+    key: ${ENCRYPTION_KEY}

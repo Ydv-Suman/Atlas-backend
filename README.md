@@ -15,10 +15,9 @@ Flutter App (iOS / Android)
         |
   api-gateway :8080 — JWT validation, rate limiting, routing
         |
-        +---> auth-service        :8081  (users, email verification, credits, subscription)
+        +---> auth-service        :8090  (users, email verification, GitHub OAuth, credits, subscription)
         +---> project-service     :8082  (projects, workspaces, repo visibility check)
         +---> agent-service       :8083  (RAG, LLM calls, diff generation, containers)
-        +---> github-service      :8084  (OAuth, clone, push, PR creation)
         +---> notification-service:8085  (FCM push, WebSocket job status)
 ```
 
@@ -52,10 +51,9 @@ Flutter App (iOS / Android)
 | Service              | Port | Database       | Responsibility                                                              |
 |----------------------|------|----------------|-----------------------------------------------------------------------------|
 | api-gateway          | 8080 | — (stateless)  | JWT validation, rate limiting, onboarding gate, route to downstream         |
-| auth-service         | 8081 | atlas_auth_db  | Registration, email verification, JWT issuance, credits, subscriptions      |
+| auth-service         | 8090 | atlas_auth_db  | Registration, email verification, GitHub OAuth, JWT issuance, credits, subscriptions |
 | project-service      | 8082 | atlas_proj_db  | Project CRUD, workspace metadata, repo visibility, Pro-gate enforcement     |
 | agent-service        | 8083 | atlas_agent_db | Agent job queue, RAG pipeline, LLM routing, diff generation, test runner    |
-| github-service       | 8084 | atlas_gh_db    | GitHub OAuth, token encryption, repo clone, branch push, PR creation        |
 | notification-service | 8085 | — (stateless)  | FCM push on job completion, WebSocket streaming for real-time job status    |
 
 ## Repository Structure
@@ -66,10 +64,9 @@ atlas-backend/
 ├── shared-lib/              # Contracts only — DTOs, events, shared security, exceptions
 ├── services/
 │   ├── api-gateway/         # :8080 — entry point
-│   ├── auth-service/        # :8081 — users, verification, credits, subscription
+│   ├── auth-service/        # :8090 — users, verification, GitHub OAuth, credits, subscription
 │   ├── project-service/     # :8082 — projects, workspaces, repo visibility
 │   ├── agent-service/       # :8083 — RAG, LLM, diff, containers
-│   ├── github-service/      # :8084 — OAuth, clone, push, PR
 │   └── notification-service/# :8085 — FCM, WebSocket
 ├── platform/
 │   ├── k8s/                 # Kubernetes manifests (services + infra)
@@ -110,18 +107,16 @@ Register → Email OTP sent → Verify email → Free credits granted
    Each service has its own `.env` file:
    ```bash
    cp services/auth-service/.env.example services/auth-service/.env
-   cp services/github-service/.env.example services/github-service/.env
    ```
    Required variables per service:
    - **All services**: `JWT_SECRET` (must be identical across services)
-   - **auth-service**: `DB_URL`, `DB_USERNAME`, `DB_PASSWORD`, `REDIS_HOST`, `REDIS_PORT`, `JWT_EXPIRATION_MS`, `MAIL_HOST`, `MAIL_PORT`, `MAIL_USERNAME`, `MAIL_PASSWORD`
-   - **github-service**: `DB_URL`, `DB_USERNAME`, `DB_PASSWORD`, `GITHUB_CLIENT_ID`, `GITHUB_CLIENT_SECRET`, `ENCRYPTION_KEY`, `AUTH_SERVICE_URL`
+   - **auth-service**: `DB_URL`, `DB_USERNAME`, `DB_PASSWORD`, `REDIS_HOST`, `REDIS_PORT`, `JWT_EXPIRATION_MS`, `MAIL_HOST`, `MAIL_PORT`, `MAIL_USERNAME`, `MAIL_PASSWORD`, `GITHUB_CLIENT_ID`, `GITHUB_CLIENT_SECRET`, `ENCRYPTION_KEY`
 
 3. **Build all modules from root**
    ```bash
    mvn compile
    ```
-   Builds in order: shared-lib → auth-service → github-service.
+   Builds in order: shared-lib → auth-service.
 
 4. **Start infrastructure with Docker Compose**
    ```bash
