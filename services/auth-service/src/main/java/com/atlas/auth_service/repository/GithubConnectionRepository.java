@@ -1,6 +1,6 @@
-package com.atlas.github_service.repository;
+package com.atlas.auth_service.repository;
 
-import com.atlas.github_service.entity.GithubConnections;
+import com.atlas.auth_service.entity.GithubConnections;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 

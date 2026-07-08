@@ -46,9 +46,9 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                         .map(SimpleGrantedAuthority::new)
                         .toList();
 
-                // Principal = email (getName() works), details = full JwtClaims
+                // Principal = username (getName() works), details = full JwtClaims
                 UsernamePasswordAuthenticationToken authentication =
-                        new UsernamePasswordAuthenticationToken(claims.email(), null, authorities);
+                        new UsernamePasswordAuthenticationToken(claims.username(), null, authorities);
                 authentication.setDetails(claims);
                 SecurityContextHolder.getContext().setAuthentication(authentication);
             }
