@@ -16,7 +16,7 @@ public class PathsConfig {
                 "/api/users/register/public",
                 "/api/users/verify-email",
                 "/api/users/resend-otp",
-                "/api/auth/github-authorized"
+                "/api/github/callback"
         );
     }
 
@@ -27,7 +27,8 @@ public class PathsConfig {
                 "/api/users/fetch",
                 "/api/users/update",
                 "/api/users/delete",
-                "/api/auth/logout"
+                "/api/auth/logout",
+                "/api/github/authorize"
         );
     }
 

@@ -1,11 +1,11 @@
-package com.atlas.github_service.controller;
+package com.atlas.auth_service.controller;
 
-import com.atlas.github_service.constants.GithubConstants;
-import com.atlas.github_service.dto.AuthorizeResponseDto;
+import com.atlas.auth_service.Constants.AuthConstants;
+import com.atlas.auth_service.dto.AuthorizeResponseDto;
+import com.atlas.auth_service.service.IAuthService;
+import com.atlas.auth_service.service.IGithubOAuthService;
 import com.atlas.shared.dto.ApiResponse;
 import com.atlas.shared.security.JwtClaims;
-import com.atlas.github_service.service.IGithubService;
-import com.atlas.github_service.service.client.AuthFeignClient;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -21,8 +21,8 @@ import org.springframework.web.bind.annotation.RestController;
 @RequiredArgsConstructor
 public class GithubController {
 
-    private final IGithubService githubService;
-    private final AuthFeignClient authFeignClient;
+    private final IGithubOAuthService githubOAuthService;
+    private final IAuthService authService;
 
     /**
      * Mobile app calls this (with JWT).
@@ -31,9 +31,9 @@ public class GithubController {
     @PostMapping(value = "/authorize", version = "1.0")
     public ResponseEntity<AuthorizeResponseDto> authorize(Authentication authentication) {
         JwtClaims claims = (JwtClaims) authentication.getDetails();
-        String email = claims.email();
+        String username = claims.username();
 
-        return ResponseEntity.ok(githubService.buildAuthorizationUrl(email));
+        return ResponseEntity.ok(githubOAuthService.buildAuthorizationUrl(username));
     }
 
     /**
@@ -45,14 +45,13 @@ public class GithubController {
             @RequestParam("code") String code,
             @RequestParam("state") String state
     ) {
-        githubService.handleCallback(code, state);
+        githubOAuthService.handleCallback(code, state);
 
-        // Extract email from state to notify auth-service
-        String email = githubService.getEmailFromState(state);
-        authFeignClient.setGithubAuthorized(email);
+        String username = githubOAuthService.getUsernameFromState(state);
+        authService.setGithubAuthorized(username);
 
         return ResponseEntity
                 .status(HttpStatus.OK)
-                .body(ApiResponse.success(GithubConstants.STATUS_200, GithubConstants.MESSAGE_200_CALLBACK));
+                .body(ApiResponse.success(AuthConstants.STATUS_200, "GitHub connected successfully. You can close this window."));
     }
 }

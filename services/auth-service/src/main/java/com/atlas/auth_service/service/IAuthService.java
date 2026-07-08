@@ -11,5 +11,5 @@ public interface IAuthService {
 
     boolean isTokenBlacklisted(String token);
 
-    void setGithubAuthorized(String email);
+    void setGithubAuthorized(String username);
 }
