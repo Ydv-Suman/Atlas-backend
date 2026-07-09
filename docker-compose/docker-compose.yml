@@ -15,10 +15,16 @@ services:
       service: network-deploy-service
 
   atlasauthservice:
-    image: "sumanydv/atlas-auth-service:v1"
+    image: "sumanydv/atlas-auth-service:v2"
     container_name: "atlas-auth-service"
     ports:
       - "8090:8090"
+    healthcheck:
+      test: "curl --fail --silent localhost:8090/actuator/health/readiness | grep UP || exit 1"
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
     depends_on:
       redis:
         condition: service_healthy
@@ -30,6 +36,21 @@ services:
     extends:
       file: common-config.yml
       service: microservice-base-config
+
+  workspaceservice:
+    image: "sumanydv/atlas-workspace-service:v2"
+    container_name: "atlas-workspace-service"
+    ports:
+      - "9000:9000"
+    depends_on:
+      atlasauthservice:
+        condition: service_healthy
+    env_file:
+      - ../services/workspace-service/.env
+    extends:
+      file: common-config.yml
+      service: microservice-base-config
+
 
 
 networks:
