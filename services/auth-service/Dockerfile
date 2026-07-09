@@ -2,12 +2,13 @@ FROM eclipse-temurin:25-jdk-alpine AS build
 WORKDIR /app
 COPY mvnw pom.xml ./
 COPY .mvn .mvn
-RUN chmod +x mvnw && ./mvnw dependency:go-offline -B
-COPY src src
-RUN ./mvnw package -DskipTests -B
+COPY shared-lib shared-lib
+COPY services/workspace-service/pom.xml services/workspace-service/pom.xml
+COPY services/auth-service services/auth-service
+RUN chmod +x mvnw && ./mvnw package -pl services/auth-service -am -DskipTests -B
 
 FROM eclipse-temurin:25-jre-alpine
 WORKDIR /app
-COPY --from=build /app/target/*.jar app.jar
+COPY --from=build /app/services/auth-service/target/*.jar app.jar
 EXPOSE 8090
 ENTRYPOINT ["java", "-jar", "app.jar"]
