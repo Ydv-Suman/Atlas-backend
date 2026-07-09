@@ -18,7 +18,7 @@ public class PathsConfig {
     @Bean(name = "securePaths")
     public List<String> securePaths() {
         return List.of(
-                "/api/workspaces/**"
+                "/api/workspace/**"
         );
     }
 }

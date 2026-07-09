@@ -9,4 +9,6 @@ public interface IGithubOAuthService {
     String handleCallback(String code, String state);
 
     String getUsernameFromState(String state);
+
+    String getDecryptedToken(String username);
 }

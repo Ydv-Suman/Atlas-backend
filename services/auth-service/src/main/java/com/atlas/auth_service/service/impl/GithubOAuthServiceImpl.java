@@ -114,6 +114,13 @@ public class GithubOAuthServiceImpl implements IGithubOAuthService {
     }
 
     @Override
+    public String getDecryptedToken(String username) {
+        GithubConnections connection = connectionRepository.findByUserId(username)
+                .orElseThrow(() -> new RuntimeException("No GitHub connection found for user: " + username));
+        return encryptionUtil.decrypt(connection.getEncryptedAccessToken());
+    }
+
+    @Override
     public String getUsernameFromState(String encodedState) {
         String decoded = new String(Base64.getUrlDecoder().decode(encodedState), StandardCharsets.UTF_8);
         String[] parts = decoded.split("\\|");
