@@ -14,3 +14,11 @@ spring:
   jpa:
     show-sql: false
     open-in-view: false
+
+app:
+  jwt:
+    secret: ${JWT_SECRET}
+
+atlas:
+  auth-service:
+    url: ${AUTH_SERVICE_URL:http://localhost:8090}

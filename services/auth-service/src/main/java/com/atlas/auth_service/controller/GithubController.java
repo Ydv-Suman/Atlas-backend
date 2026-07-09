@@ -14,6 +14,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
@@ -34,6 +35,15 @@ public class GithubController {
         String username = claims.username();
 
         return ResponseEntity.ok(githubOAuthService.buildAuthorizationUrl(username));
+    }
+
+    /**
+     * Internal endpoint for service-to-service calls.
+     * Returns decrypted GitHub access token for the given username.
+     */
+    @GetMapping("/internal/token/{username}")
+    public ResponseEntity<String> getGithubToken(@PathVariable String username) {
+        return ResponseEntity.ok(githubOAuthService.getDecryptedToken(username));
     }
 
     /**
