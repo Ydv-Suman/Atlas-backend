@@ -10,5 +10,5 @@ import java.util.Optional;
 public interface WorkspaceRepository extends JpaRepository <WorkspaceEntity, Long>{
     Optional<WorkspaceEntity> findById(Long id);
     Optional<WorkspaceEntity> findByUserId(Long userId);
-    Optional<WorkspaceEntity> findByName(String name);
+    Optional<WorkspaceEntity> findByProjectName(String projectName);
 }
