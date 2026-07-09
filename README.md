@@ -52,6 +52,7 @@ Flutter App (iOS / Android)
 |----------------------|------|----------------|-----------------------------------------------------------------------------|
 | api-gateway          | 8080 | — (stateless)  | JWT validation, rate limiting, onboarding gate, route to downstream         |
 | auth-service         | 8090 | atlas_auth_db  | Registration, email verification, GitHub OAuth, JWT issuance, credits, subscriptions |
+| workspace-service    | 9000 | atlas_ws_db    | Workspace CRUD, repo ownership tracking, GitHub repo metadata               |
 | project-service      | 8082 | atlas_proj_db  | Project CRUD, workspace metadata, repo visibility, Pro-gate enforcement     |
 | agent-service        | 8083 | atlas_agent_db | Agent job queue, RAG pipeline, LLM routing, diff generation, test runner    |
 | notification-service | 8085 | — (stateless)  | FCM push on job completion, WebSocket streaming for real-time job status    |
@@ -65,6 +66,7 @@ atlas-backend/
 ├── services/
 │   ├── api-gateway/         # :8080 — entry point
 │   ├── auth-service/        # :8090 — users, verification, GitHub OAuth, credits, subscription
+│   ├── workspace-service/   # :9000 — workspaces, repo ownership, GitHub metadata
 │   ├── project-service/     # :8082 — projects, workspaces, repo visibility
 │   ├── agent-service/       # :8083 — RAG, LLM, diff, containers
 │   └── notification-service/# :8085 — FCM, WebSocket
@@ -111,12 +113,13 @@ Register → Email OTP sent → Verify email → Free credits granted
    Required variables per service:
    - **All services**: `JWT_SECRET` (must be identical across services)
    - **auth-service**: `DB_URL`, `DB_USERNAME`, `DB_PASSWORD`, `REDIS_HOST`, `REDIS_PORT`, `JWT_EXPIRATION_MS`, `MAIL_HOST`, `MAIL_PORT`, `MAIL_USERNAME`, `MAIL_PASSWORD`, `GITHUB_CLIENT_ID`, `GITHUB_CLIENT_SECRET`, `ENCRYPTION_KEY`
+   - **workspace-service**: `DB_URL`, `DB_USERNAME`, `DB_PASSWORD`, `JWT_SECRET`
 
 3. **Build all modules from root**
    ```bash
    mvn compile
    ```
-   Builds in order: shared-lib → auth-service.
+   Builds in order: shared-lib → auth-service → workspace-service.
 
 4. **Start infrastructure with Docker Compose**
    ```bash
