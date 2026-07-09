@@ -16,7 +16,8 @@ public class PathsConfig {
                 "/api/users/register/public",
                 "/api/users/verify-email",
                 "/api/users/resend-otp",
-                "/api/github/callback"
+                "/api/github/callback",
+                "/api/github/internal/**"
         );
     }
 
