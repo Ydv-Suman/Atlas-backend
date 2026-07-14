@@ -15,6 +15,7 @@ import lombok.Setter;
 public class GithubReposDto {
 
     private long id;
+
     private String name;
 
     @JsonProperty("full_name")
