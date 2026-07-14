@@ -15,9 +15,10 @@ Flutter App (iOS / Android)
         |
   api-gateway :8080 — JWT validation, rate limiting, routing
         |
-        +---> auth-service        :8090  (users, email verification, GitHub OAuth, credits, subscription)
-        +---> project-service     :8082  (projects, workspaces, repo visibility check)
+        +---> auth-service        :8085  (users, email verification, GitHub OAuth, credits, subscription)
+        +---> workspace-service   :8090  (projects, GitHub repo listing, repo validation, repo creation)
         +---> agent-service       :8083  (RAG, LLM calls, diff generation, containers)
+        +---> github-service      :8084  (repo clone, branch push, PR creation — Phase 2)
         +---> notification-service:8085  (FCM push, WebSocket job status)
 ```
 
@@ -29,6 +30,7 @@ Flutter App (iOS / Android)
 - Services communicate via OpenFeign HTTP clients only.
 - No cross-service foreign keys. UUIDs stored as plain columns; integrity enforced at application layer.
 - Onboarding gate enforced at gateway level: unverified email or missing GitHub authorization blocks all project routes.
+- GitHub OAuth lives in auth-service — it is part of the authentication/onboarding flow.
 
 ## Tech Stack
 
@@ -39,7 +41,7 @@ Flutter App (iOS / Android)
 | Build          | Maven multi-module (parent POM + shared-lib)                |
 | Database       | PostgreSQL + pgvector                                       |
 | Cache          | Redis                                                       |
-| Auth           | Stateless JWT + CSRF cookie protection, BCrypt(12)          |
+| Auth           | Stateless JWT (HS256) + BCrypt(12)                          |
 | Migrations     | Flyway                                                      |
 | Containers     | Docker, Kubernetes (Tilt local), Railway (prod)             |
 | Email          | Spring Mail (SMTP)                                          |
@@ -48,28 +50,29 @@ Flutter App (iOS / Android)
 
 ## Services
 
-| Service              | Port | Database       | Responsibility                                                              |
-|----------------------|------|----------------|-----------------------------------------------------------------------------|
-| api-gateway          | 8080 | — (stateless)  | JWT validation, rate limiting, onboarding gate, route to downstream         |
-| auth-service         | 8090 | atlas_auth_db  | Registration, email verification, GitHub OAuth, JWT issuance, credits, subscriptions |
-| workspace-service    | 9000 | atlas_ws_db    | Workspace CRUD, repo ownership tracking, GitHub repo metadata               |
-| project-service      | 8082 | atlas_proj_db  | Project CRUD, workspace metadata, repo visibility, Pro-gate enforcement     |
-| agent-service        | 8083 | atlas_agent_db | Agent job queue, RAG pipeline, LLM routing, diff generation, test runner    |
-| notification-service | 8085 | — (stateless)  | FCM push on job completion, WebSocket streaming for real-time job status    |
+| Service              | Port | Database            | Status      | Responsibility                                                              |
+|----------------------|------|---------------------|-------------|-----------------------------------------------------------------------------|
+| api-gateway          | 8080 | — (stateless)       | Planned     | JWT validation, rate limiting, onboarding gate, route to downstream         |
+| auth-service         | 8085 | atlas_auth_db       | Implemented | Registration, email verification, GitHub OAuth, JWT issuance, credits       |
+| workspace-service    | 8090 | atlas_workspace_db  | Implemented | Project CRUD, GitHub repo listing, repo validation, repo creation           |
+| agent-service        | 8083 | atlas_agent_db      | Phase 2     | Agent job queue, RAG pipeline, LLM routing, diff generation, test runner    |
+| github-service       | 8084 | atlas_gh_db         | Phase 2     | Repo clone, branch push, PR creation, Actions workflow injection            |
+| notification-service | 8085 | — (stateless)       | Phase 1     | FCM push on job completion, WebSocket streaming for real-time job status     |
 
 ## Repository Structure
 
 ```
 atlas-backend/
-├── pom.xml                  # Parent POM — Spring Boot 3, Java 21, module list
-├── shared-lib/              # Contracts only — DTOs, events, shared security, exceptions
+├── pom.xml                  # Parent POM — Spring Boot 4.1, Java 25, module list
+├── shared-lib/              # Contracts only — DTOs, exceptions, shared JWT security
 ├── services/
-│   ├── api-gateway/         # :8080 — entry point
-│   ├── auth-service/        # :8090 — users, verification, GitHub OAuth, credits, subscription
-│   ├── workspace-service/   # :9000 — workspaces, repo ownership, GitHub metadata
-│   ├── project-service/     # :8082 — projects, workspaces, repo visibility
-│   ├── agent-service/       # :8083 — RAG, LLM, diff, containers
-│   └── notification-service/# :8085 — FCM, WebSocket
+│   ├── auth-service/        # :8085 — users, verification, GitHub OAuth, credits
+│   ├── workspace-service/   # :8090 — projects, GitHub repos, repo validation
+│   ├── agent-service/       # :8083 — RAG, LLM, diff, containers (Phase 2)
+│   ├── github-service/      # :8084 — git operations (Phase 2)
+│   └── notification-service/# :8085 — FCM, WebSocket (Phase 1)
+├── docker-compose/
+│   └── docker-compose.yml   # Local dev infrastructure
 ├── platform/
 │   ├── k8s/                 # Kubernetes manifests (services + infra)
 │   └── railway/             # Production deploy configs
@@ -78,15 +81,54 @@ atlas-backend/
 └── Makefile                 # make up / down / build / test
 ```
 
+## API Overview
+
+All endpoints use media-type versioning: append `?v=1.0` to the URL.
+WebConfig adds `/api/` prefix to all controller paths automatically.
+
+### auth-service — `/api/auth/`, `/api/users/`, `/api/github/`
+
+| Method | Path | Auth | Description |
+|---|---|---|---|
+| POST | `/api/users/register/public?v=1.0` | Public | Register new user |
+| POST | `/api/users/verify-email?v=1.0` | Public | Verify email with OTP |
+| POST | `/api/users/resend-otp?v=1.0` | Public | Resend OTP |
+| POST | `/api/auth/login?v=1.0` | Public | Login, returns JWT |
+| POST | `/api/auth/logout?v=1.0` | Bearer | Logout (blacklists token) |
+| GET | `/api/users/fetch?v=1.0` | Bearer | Get current user profile |
+| PUT | `/api/users/update?v=1.0` | Bearer | Update user profile |
+| DELETE | `/api/users/delete?v=1.0` | Bearer | Delete current user |
+| POST | `/api/github/authorize?v=1.0` | Bearer | Returns GitHub OAuth URL |
+| GET | `/api/github/callback` | Public | GitHub OAuth callback |
+| GET | `/api/github/internal/token/{username}` | Internal | Decrypted GitHub token (service-to-service) |
+
+### workspace-service — `/api/workspace/`
+
+| Method | Path | Auth | Description |
+|---|---|---|---|
+| GET | `/api/workspace/repos?v=1.0` | Bearer | List user's GitHub repos |
+| POST | `/api/workspace/projects?v=1.0` | Bearer | Create project (validates push access) |
+| GET | `/api/workspace/projects?v=1.0` | Bearer | List user's projects |
+| GET | `/api/workspace/projects/{id}?v=1.0` | Bearer | Get project by ID |
+| DELETE | `/api/workspace/projects/{id}?v=1.0` | Bearer | Delete project |
+
+See each service's README for request/response bodies.
+
 ## Onboarding Flow
 
 ```
-Register → Email OTP sent → Verify email → Free credits granted
-→ GitHub OAuth authorization → Create projects and run agent jobs
+1. POST /api/users/register/public     → 201 (async OTP email sent)
+2. POST /api/users/verify-email        → 200 (email_verified=true, free credits granted)
+3. POST /api/auth/login                → 200 + JWT token
+4. POST /api/github/authorize          → returns GitHub OAuth URL
+5. User authorizes on GitHub           → callback sets github_authorized=true
+6. GET  /api/workspace/repos           → list repos
+7. POST /api/workspace/projects        → create project from selected repo
 ```
 
 - Public repos: allowed on free tier (uses free credits)
-- Private repos: requires Pro upgrade
+- Private repos: allowed on free tier (uses free credits)
+- Test/API/Preview: requires Pro upgrade (compute-heavy)
 
 ## Prerequisites
 
@@ -109,11 +151,40 @@ Register → Email OTP sent → Verify email → Free credits granted
    Each service has its own `.env` file:
    ```bash
    cp services/auth-service/.env.example services/auth-service/.env
+   cp services/workspace-service/.env.example services/workspace-service/.env
    ```
+
    Required variables per service:
-   - **All services**: `JWT_SECRET` (must be identical across services)
-   - **auth-service**: `DB_URL`, `DB_USERNAME`, `DB_PASSWORD`, `REDIS_HOST`, `REDIS_PORT`, `JWT_EXPIRATION_MS`, `MAIL_HOST`, `MAIL_PORT`, `MAIL_USERNAME`, `MAIL_PASSWORD`, `GITHUB_CLIENT_ID`, `GITHUB_CLIENT_SECRET`, `ENCRYPTION_KEY`
-   - **workspace-service**: `DB_URL`, `DB_USERNAME`, `DB_PASSWORD`, `JWT_SECRET`
+
+   **auth-service:**
+   ```properties
+   DB_URL=jdbc:postgresql://<host>/<dbname>?sslmode=require
+   DB_USERNAME=your_db_user
+   DB_PASSWORD=your_db_password
+   JWT_SECRET=your_jwt_secret
+   JWT_EXPIRATION_MS=86400000
+   REDIS_HOST=localhost
+   REDIS_PORT=6379
+   MAIL_HOST=smtp.gmail.com
+   MAIL_PORT=587
+   MAIL_USERNAME=your_email@gmail.com
+   MAIL_PASSWORD=your_app_password
+   ENCRYPTION_KEY=your_hex_encryption_key
+   GITHUB_CLIENT_ID=your_github_oauth_client_id
+   GITHUB_CLIENT_SECRET=your_github_oauth_client_secret
+   GITHUB_REDIRECT_URI=http://localhost:8085/api/github/callback
+   ```
+
+   **workspace-service:**
+   ```properties
+   DB_URL=jdbc:postgresql://<host>/<dbname>?sslmode=require
+   DB_USERNAME=your_db_user
+   DB_PASSWORD=your_db_password
+   JWT_SECRET=your_jwt_secret
+   AUTH_SERVICE_URL=http://localhost:8085
+   ```
+
+   `JWT_SECRET` must be identical across all services.
 
 3. **Build all modules from root**
    ```bash
@@ -126,10 +197,13 @@ Register → Email OTP sent → Verify email → Free credits granted
    docker-compose -f docker-compose/docker-compose.yml up -d
    ```
 
-5. **Run a single service locally** (requires infrastructure from step 4)
+5. **Run services locally** (requires infrastructure from step 4)
    ```bash
-   cd services/auth-service
-   mvn spring-boot:run
+   # Terminal 1 — auth-service
+   mvn -f services/auth-service/pom.xml spring-boot:run
+
+   # Terminal 2 — workspace-service
+   mvn -f services/workspace-service/pom.xml spring-boot:run
    ```
 
 ## Project Phases

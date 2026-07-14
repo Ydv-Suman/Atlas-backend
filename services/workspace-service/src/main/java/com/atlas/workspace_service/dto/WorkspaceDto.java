@@ -2,16 +2,23 @@ package com.atlas.workspace_service.dto;
 
 import com.atlas.workspace_service.entity.RepoOwnership;
 import com.atlas.workspace_service.entity.RepoVisibility;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Getter;
+import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 import java.time.Instant;
 
 @Getter
 @Setter
-public class WorkspaceDto  {
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
+public class WorkspaceDto {
 
-    private  String projectName;
+    private Long id;
+    private String projectName;
     private String framework;
     private String githubUrl;
     private String repoOwner;
@@ -20,6 +27,4 @@ public class WorkspaceDto  {
     private String projectType;
     private Instant createdAt;
     private Instant lastSyncedAt;
-
-
 }
