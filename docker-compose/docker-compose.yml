@@ -15,10 +15,10 @@ services:
       service: network-deploy-service
 
   atlasauthservice:
-    image: "sumanydv/atlas-auth-service:v2"
+    image: "sumanydv/atlas-auth-service:v3"
     container_name: "atlas-auth-service"
-    ports:
-      - "8085:8085"
+    expose:
+      - "8085"
     healthcheck:
       test: "wget -qO- http://localhost:8085/actuator/health | grep UP || exit 1"
       interval: 10s
@@ -38,10 +38,16 @@ services:
       service: microservice-base-config
 
   workspaceservice:
-    image: "sumanydv/atlas-workspace-service:v2"
+    image: "sumanydv/atlas-workspace-service:v3"
     container_name: "atlas-workspace-service"
-    ports:
-      - "8090:8090"
+    expose:
+      - "8090"
+    healthcheck:
+      test: "wget -qO- http://localhost:8090/actuator/health | grep UP || exit 1"
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 5s
     depends_on:
       atlasauthservice:
         condition: service_healthy
@@ -49,6 +55,25 @@ services:
       - ../services/workspace-service/.env
     environment:
       AUTH_SERVICE_URL: "http://atlasauthservice:8085"
+    extends:
+      file: common-config.yml
+      service: microservice-base-config
+
+  apigateway:
+    image: "sumanydv/atlas-api-gateway:v3"
+    container_name: "atlas-api-gateway"
+    ports:
+      - "8080:8080"
+    depends_on:
+      atlasauthservice:
+        condition: service_healthy
+      workspaceservice:
+        condition: service_healthy
+    env_file:
+      - ../services/api-gateway/.env
+    environment:
+      AUTH_SERVICE_URL: "http://atlasauthservice:8085"
+      WORKSPACE_SERVICE_URL: "http://workspaceservice:8090"
     extends:
       file: common-config.yml
       service: microservice-base-config
