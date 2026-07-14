@@ -1,5 +1,5 @@
 server:
-  port: 9000
+  port: 8090
 
 spring:
   application:
@@ -20,5 +20,7 @@ app:
     secret: ${JWT_SECRET}
 
 atlas:
+  config:
+    import: optional:file:.env[.properties],optional:file:services/workspace-service/.env[.properties]
   auth-service:
-    url: ${AUTH_SERVICE_URL:http://localhost:8090}
+    url: ${AUTH_SERVICE_URL}

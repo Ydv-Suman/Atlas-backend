@@ -1,5 +1,5 @@
 server:
-  port: 8090
+  port: 8085
 
 spring:
   application:
@@ -43,7 +43,7 @@ app:
   github:
     client-id: ${GITHUB_CLIENT_ID}
     client-secret: ${GITHUB_CLIENT_SECRET}
-    redirect-uri: ${GITHUB_REDIRECT_URI:http://localhost:8090/api/github/callback}
+    redirect-uri: ${GITHUB_REDIRECT_URI:http://localhost:8085/api/github/callback}
     scopes: repo,read:user,workflow
   encryption:
     key: ${ENCRYPTION_KEY}

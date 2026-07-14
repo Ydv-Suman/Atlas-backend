@@ -9,6 +9,7 @@ RUN chmod +x mvnw && ./mvnw package -pl services/auth-service -am -DskipTests -B
 
 FROM eclipse-temurin:25-jre-alpine
 WORKDIR /app
+RUN apk add --no-cache curl
 COPY --from=build /app/services/auth-service/target/*.jar app.jar
-EXPOSE 8090
+EXPOSE 8085
 ENTRYPOINT ["java", "-jar", "app.jar"]
