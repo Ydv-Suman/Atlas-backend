@@ -4,6 +4,7 @@ COPY mvnw pom.xml ./
 COPY .mvn .mvn
 COPY shared-lib shared-lib
 COPY services/auth-service/pom.xml services/auth-service/pom.xml
+COPY services/api-gateway/pom.xml services/api-gateway/pom.xml
 COPY services/workspace-service services/workspace-service
 RUN chmod +x mvnw && ./mvnw package -pl services/workspace-service -am -DskipTests -B
 
