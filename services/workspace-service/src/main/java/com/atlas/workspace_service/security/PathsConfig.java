@@ -11,7 +11,7 @@ public class PathsConfig {
     @Bean(name = "publicPaths")
     public List<String> publicPaths() {
         return List.of(
-                "/actuator/health"
+                "/actuator/**"
         );
     }
 

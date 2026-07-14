@@ -22,7 +22,7 @@ public class WorkspaceEntity {
     @Column(name="user_id", nullable = false)
     private String userId;
 
-    @Size(min = 1, max = 150)
+    @Size(min = 1, max = 255)
     @Column(name="project_name",nullable = false)
     private String projectName;
 

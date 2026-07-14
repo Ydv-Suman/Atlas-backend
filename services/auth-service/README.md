@@ -122,39 +122,90 @@ Redis is used for:
 
 ## API Endpoints
 
+All endpoints use media-type versioning: append `?v=1.0` to the URL.
+
 ### Public (no auth required)
 
 | Method | Path | Description |
 |---|---|---|
-| POST | `/api/v1/users/register/public` | Register new user |
-| POST | `/api/v1/auth/login` | Login, returns JWT |
-| POST | `/api/v1/users/verify-email` | Verify email with OTP |
-| POST | `/api/v1/users/resend-otp` | Resend OTP |
-| GET | `/api/v1/csrf/public` | Get CSRF token |
+| POST | `/api/users/register/public?v=1.0` | Register new user |
+| POST | `/api/auth/login?v=1.0` | Login, returns JWT |
+| POST | `/api/users/verify-email?v=1.0` | Verify email with OTP |
+| POST | `/api/users/resend-otp?v=1.0` | Resend OTP |
+| GET | `/api/csrf/public` | Get CSRF token |
+| GET | `/api/github/callback` | GitHub OAuth callback (receives code + state from GitHub redirect) |
 
 ### Authenticated (Bearer token required)
 
 | Method | Path | Description |
 |---|---|---|
-| GET | `/api/v1/users/fetch` | Get current user profile |
-| PUT | `/api/v1/users/update` | Update user profile |
-| DELETE | `/api/v1/users/delete` | Delete current user |
-| POST | `/api/v1/auth/logout` | Logout (blacklists token) |
-
-### GitHub OAuth (mixed auth)
-
-| Method | Path | Description |
-|---|---|---|
-| POST | `/api/v1/github/authorize` | Returns GitHub OAuth authorization URL. Requires Bearer token. |
-| GET | `/api/github/callback` | GitHub OAuth callback. Public — receives code + state from GitHub redirect. |
+| GET | `/api/users/fetch?v=1.0` | Get current user profile |
+| PUT | `/api/users/update?v=1.0` | Update user profile |
+| DELETE | `/api/users/delete?v=1.0` | Delete current user |
+| POST | `/api/auth/logout?v=1.0` | Logout (blacklists token) |
+| POST | `/api/github/authorize?v=1.0` | Returns GitHub OAuth authorization URL |
 
 ### Admin only
 
 | Method | Path | Description |
 |---|---|---|
-| POST | `/api/v1/users/register/admin` | Register admin user |
+| POST | `/api/users/register/admin?v=1.0` | Register admin user |
 
-### Update User Request
+### Internal (service-to-service, no JWT)
+
+| Method | Path | Description |
+|---|---|---|
+| GET | `/api/github/internal/token/{username}` | Returns decrypted GitHub token for user |
+
+### Request / Response Bodies
+
+#### Register — `POST /api/users/register/public?v=1.0`
+
+```json
+{
+    "firstName": "John",
+    "lastName": "Doe",
+    "username": "john_doe",
+    "email": "john@example.com",
+    "password": "Password@123"
+}
+```
+
+#### Login — `POST /api/auth/login?v=1.0`
+
+```json
+{
+    "username": "john_doe",
+    "password": "Password@123"
+}
+```
+
+Response:
+
+```json
+{
+    "token": "eyJhbGciOiJIUzI1NiJ9..."
+}
+```
+
+#### Verify Email — `POST /api/users/verify-email?v=1.0`
+
+```json
+{
+    "email": "john@example.com",
+    "otp": "123456"
+}
+```
+
+#### Resend OTP — `POST /api/users/resend-otp?v=1.0`
+
+```json
+{
+    "email": "john@example.com"
+}
+```
+
+#### Update User — `PUT /api/users/update?v=1.0`
 
 Password change requires `currentPassword`:
 
@@ -170,6 +221,16 @@ Password change requires `currentPassword`:
 ```
 
 Omit `password` and `currentPassword` to update only profile fields.
+
+#### GitHub Authorize — `POST /api/github/authorize?v=1.0`
+
+No request body. Returns:
+
+```json
+{
+    "authorizationUrl": "https://github.com/login/oauth/authorize?client_id=...&state=..."
+}
+```
 
 ## Database Schema
 
@@ -225,9 +286,9 @@ DEFAULT_ADMIN_PASSWORD=SecurePassword@123
 ### Registration → Login Flow
 
 ```
-1. POST /api/users/register/public     → 201 (async OTP email sent)
-2. POST /api/users/verify-email        → 200 (email_verified=true)
-3. POST /api/auth/login                → 200 + JWT token
+1. POST /api/users/register/public?v=1.0   → 201 (async OTP email sent)
+2. POST /api/users/verify-email?v=1.0      → 200 (email_verified=true)
+3. POST /api/auth/login?v=1.0              → 200 + JWT token
 4. Use JWT in Authorization: Bearer <token> for all authenticated endpoints
 ```
 
@@ -235,7 +296,7 @@ DEFAULT_ADMIN_PASSWORD=SecurePassword@123
 
 ```
 1. User completes registration + email verification above
-2. POST /api/v1/github/authorize (with JWT) → returns GitHub OAuth URL
+2. POST /api/github/authorize?v=1.0 (with JWT) → returns GitHub OAuth URL
 3. User opens URL → logs into GitHub → clicks Authorize
 4. GitHub redirects to GET /api/github/callback?code=...&state=...
 5. auth-service exchanges code for token, stores encrypted token, sets github_authorized=true
@@ -245,10 +306,10 @@ DEFAULT_ADMIN_PASSWORD=SecurePassword@123
 ### Account Update Flow
 
 ```
-Profile only:  PUT /api/users/update  { "firstName": "New" }
-Email change:  PUT /api/users/update  { "email": "new@mail.com" }
+Profile only:  PUT /api/users/update?v=1.0  { "firstName": "New" }
+Email change:  PUT /api/users/update?v=1.0  { "email": "new@mail.com" }
                → resets emailVerified, sends new OTP, must re-verify
-Password:      PUT /api/users/update  { "currentPassword": "old", "password": "new" }
+Password:      PUT /api/users/update?v=1.0  { "currentPassword": "old", "password": "new" }
 ```
 
 ## Notes
