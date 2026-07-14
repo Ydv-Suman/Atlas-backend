@@ -1,0 +1,33 @@
+server:
+  port: 8080
+spring:
+  application:
+    name: api-gateway
+  cloud:
+    config:
+      enabled: false
+    gateway:
+      server:
+        webflux:
+          routes:
+            - id: auth-service
+              uri: ${AUTH_SERVICE_URL:http://localhost:8085}
+              predicates:
+                - Path=/api/auth/**,/api/github/**,/api/users/**
+            - id: workspace-service
+              uri: ${WORKSPACE_SERVICE_URL:http://localhost:8090}
+              predicates:
+                - Path=/api/workspace/**
+  config:
+    import: optional:file:.env[.properties], optional:file:services/api-gateway/.env[.properties]
+management:
+  endpoints:
+    web:
+      exposure:
+        include: "*"
+  endpoint:
+    gateway:
+      enabled: true
+app:
+  jwt:
+    secret: ${JWT_SECRET}

@@ -28,6 +28,7 @@
         <module>shared-lib</module>
         <module>services/auth-service</module>
         <module>services/workspace-service</module>
+        <module>services/api-gateway</module>
     </modules>
 
     <dependencyManagement>
