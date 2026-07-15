@@ -43,7 +43,7 @@ public class AuthServiceSecurityConfig {
                         .csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse())
                         .csrfTokenRequestHandler(requestHandler)
                         .ignoringRequestMatchers(publicPaths.toArray(String[]::new))
-                        .ignoringRequestMatchers("/api/users/delete", "/api/auth/logout", "/api/github/callback", "/api/github/authorize", "/api/github/internal/**")
+                        .ignoringRequestMatchers("/api/users/delete", "/api/auth/logout", "/api/auth/device-token", "/api/github/callback", "/api/github/authorize", "/api/github/internal/**", "/api/auth/internal/**")
                 )
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .headers(headers -> headers

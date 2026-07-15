@@ -18,6 +18,7 @@ public class PathsConfig {
                 "/api/users/resend-otp",
                 "/api/github/callback",
                 "/api/github/internal/**",
+                "/api/auth/internal/**",
                 "/actuator/**"
         );
     }
@@ -30,7 +31,8 @@ public class PathsConfig {
                 "/api/users/update",
                 "/api/users/delete",
                 "/api/auth/logout",
-                "/api/github/authorize"
+                "/api/github/authorize",
+                "/api/auth/device-token"
         );
     }
 
