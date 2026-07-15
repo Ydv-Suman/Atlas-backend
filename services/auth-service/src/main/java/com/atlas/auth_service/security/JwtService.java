@@ -41,6 +41,8 @@ public class JwtService {
         Date expiryDate = new Date(now.getTime() + expirationMs);
 
         return Jwts.builder()
+                .issuer("atlas-auth-service")
+                .audience().add("atlas-api").and()
                 .subject(user.getUsername())
                 .claim("roles", List.of(user.getRole().name()))
                 .claim("emailVerified", user.isEmailVerified())

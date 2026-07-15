@@ -1,6 +1,5 @@
 package com.atlas.api_gateway.security;
 
-import com.atlas.shared.security.JwtClaims;
 import com.atlas.shared.security.JwtTokenParser;
 import org.springframework.http.HttpHeaders;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -26,20 +25,20 @@ public class JwtAuthenticationWebFilter implements WebFilter {
         if (authHeader != null && authHeader.startsWith("Bearer ")) {
             String token = authHeader.substring(7);
 
-            if (tokenParser.isValid(token)) {
-                JwtClaims claims = tokenParser.extractClaims(token);
+            return tokenParser.validateAndExtract(token)
+                    .map(claims -> {
+                        var authorities = claims.roles().stream()
+                                .map(SimpleGrantedAuthority::new)
+                                .toList();
 
-                var authorities = claims.roles().stream()
-                        .map(SimpleGrantedAuthority::new)
-                        .toList();
+                        var authentication = new UsernamePasswordAuthenticationToken(
+                                claims.username(), null, authorities);
+                        authentication.setDetails(claims);
 
-                var authentication = new UsernamePasswordAuthenticationToken(
-                        claims.username(), null, authorities);
-                authentication.setDetails(claims);
-
-                return chain.filter(exchange)
-                        .contextWrite(ReactiveSecurityContextHolder.withAuthentication(authentication));
-            }
+                        return chain.filter(exchange)
+                                .contextWrite(ReactiveSecurityContextHolder.withAuthentication(authentication));
+                    })
+                    .orElseGet(() -> chain.filter(exchange));
         }
 
         return chain.filter(exchange);
