@@ -26,7 +26,7 @@ public class GithubConnections {
     private UUID id;
 
     @Column(name = "user_id", nullable = false)
-    private String userId;
+    private UUID userId;
 
     @Size(max = 50)
     @NotNull

@@ -10,7 +10,7 @@ import java.util.UUID;
 @Repository
 public interface GithubConnectionRepository extends JpaRepository<GithubConnections, UUID> {
 
-    Optional<GithubConnections> findByUserId(String userId);
+    Optional<GithubConnections> findByUserId(UUID userId);
 
-    boolean existsByUserId(String userId);
+    boolean existsByUserId(UUID userId);
 }

@@ -4,7 +4,9 @@ import com.atlas.auth_service.config.GithubOAuthConfig;
 import com.atlas.auth_service.dto.AuthorizeResponseDto;
 import com.atlas.auth_service.dto.GithubTokenResponse;
 import com.atlas.auth_service.dto.GithubUserResponse;
+import com.atlas.auth_service.entity.AtlasUsers;
 import com.atlas.auth_service.entity.GithubConnections;
+import com.atlas.auth_service.repository.AtlasUserRespsitory;
 import com.atlas.auth_service.repository.GithubConnectionRepository;
 import com.atlas.auth_service.service.IGithubOAuthService;
 import com.atlas.auth_service.util.EncryptionUtil;
@@ -27,6 +29,7 @@ public class GithubOAuthServiceImpl implements IGithubOAuthService {
 
     private final GithubOAuthConfig oauthConfig;
     private final GithubConnectionRepository connectionRepository;
+    private final AtlasUserRespsitory userRepository;
     private final EncryptionUtil encryptionUtil;
 
     private static final String GITHUB_AUTHORIZE_URL = "https://github.com/login/oauth/authorize";
@@ -98,7 +101,9 @@ public class GithubOAuthServiceImpl implements IGithubOAuthService {
         return response;
     }
 
-    private void saveConnection(String userId, String githubUsername, String accessToken, String scope) {
+    private void saveConnection(String username, String githubUsername, String accessToken, String scope) {
+        UUID userId = resolveUserId(username);
+
         connectionRepository.findByUserId(userId)
                 .ifPresent(connectionRepository::delete);
 
@@ -115,9 +120,16 @@ public class GithubOAuthServiceImpl implements IGithubOAuthService {
 
     @Override
     public String getDecryptedToken(String username) {
-        GithubConnections connection = connectionRepository.findByUserId(username)
+        UUID userId = resolveUserId(username);
+        GithubConnections connection = connectionRepository.findByUserId(userId)
                 .orElseThrow(() -> new RuntimeException("No GitHub connection found for user: " + username));
         return encryptionUtil.decrypt(connection.getEncryptedAccessToken());
+    }
+
+    private UUID resolveUserId(String username) {
+        AtlasUsers user = userRepository.findByUsername(username)
+                .orElseThrow(() -> new RuntimeException("User not found: " + username));
+        return user.getId();
     }
 
     @Override
