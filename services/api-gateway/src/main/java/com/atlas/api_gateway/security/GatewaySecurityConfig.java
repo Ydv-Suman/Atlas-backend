@@ -45,6 +45,7 @@ public class GatewaySecurityConfig {
                         .cache(cache -> {})
                 )
                 .authorizeExchange(exchanges -> exchanges
+                        .pathMatchers("/api/**/internal/**").denyAll()
                         .pathMatchers(
                                 "/api/auth/login",
                                 "/api/users/register/public",
