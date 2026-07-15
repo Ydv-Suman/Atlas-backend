@@ -36,21 +36,19 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
         if (authHeader != null && authHeader.startsWith("Bearer ")) {
             String token = authHeader.substring(7);
-            if (tokenParser.isValid(token)
-                    && isTokenAllowed(token)
+            if (isTokenAllowed(token)
                     && SecurityContextHolder.getContext().getAuthentication() == null) {
 
-                JwtClaims claims = tokenParser.extractClaims(token);
+                tokenParser.validateAndExtract(token).ifPresent(claims -> {
+                    List<SimpleGrantedAuthority> authorities = claims.roles().stream()
+                            .map(SimpleGrantedAuthority::new)
+                            .toList();
 
-                List<SimpleGrantedAuthority> authorities = claims.roles().stream()
-                        .map(SimpleGrantedAuthority::new)
-                        .toList();
-
-                // Principal = username (getName() works), details = full JwtClaims
-                UsernamePasswordAuthenticationToken authentication =
-                        new UsernamePasswordAuthenticationToken(claims.username(), null, authorities);
-                authentication.setDetails(claims);
-                SecurityContextHolder.getContext().setAuthentication(authentication);
+                    UsernamePasswordAuthenticationToken authentication =
+                            new UsernamePasswordAuthenticationToken(claims.username(), null, authorities);
+                    authentication.setDetails(claims);
+                    SecurityContextHolder.getContext().setAuthentication(authentication);
+                });
             }
         }
 
