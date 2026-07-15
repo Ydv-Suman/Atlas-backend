@@ -29,6 +29,7 @@
         <module>services/auth-service</module>
         <module>services/workspace-service</module>
         <module>services/api-gateway</module>
+        <module>services/notification-service</module>
     </modules>
 
     <dependencyManagement>
