@@ -13,6 +13,7 @@ import java.util.Base64;
 import java.util.Collections;
 import java.util.Date;
 import java.util.List;
+import java.util.Optional;
 
 /**
  * Stateless JWT token parser. Validates signature and expiry, extracts claims.
@@ -63,13 +64,54 @@ public class JwtTokenParser {
         );
     }
 
+    /**
+     * Validates and extracts claims in a single parse — no TOCTOU gap.
+     * Returns empty if token is invalid or expired.
+     */
+    public Optional<JwtClaims> validateAndExtract(String token) {
+        try {
+            Claims claims = parseClaims(token);
+            if (claims.getSubject() == null
+                    || claims.getExpiration() == null
+                    || !claims.getExpiration().after(new Date())) {
+                return Optional.empty();
+            }
+            return Optional.of(buildJwtClaims(claims));
+        } catch (JwtException | IllegalArgumentException e) {
+            log.debug("Invalid JWT token: {}", e.getMessage());
+            return Optional.empty();
+        }
+    }
+
     public String extractSubject(String token) {
         return parseClaims(token).getSubject();
+    }
+
+    private JwtClaims buildJwtClaims(Claims claims) {
+        @SuppressWarnings("unchecked")
+        List<String> roles = claims.get("roles", List.class);
+        if (roles == null) {
+            roles = Collections.emptyList();
+        }
+
+        Boolean emailVerified = claims.get("emailVerified", Boolean.class);
+        Boolean githubAuthorized = claims.get("githubAuthorized", Boolean.class);
+        String tier = claims.get("tier", String.class);
+
+        return new JwtClaims(
+                claims.getSubject(),
+                roles,
+                emailVerified != null && emailVerified,
+                githubAuthorized != null && githubAuthorized,
+                tier != null ? tier : "FREE"
+        );
     }
 
     private Claims parseClaims(String token) {
         return Jwts.parser()
                 .verifyWith(signingKey)
+                .requireIssuer("atlas-auth-service")
+                .requireAudience("atlas-api")
                 .build()
                 .parseSignedClaims(token)
                 .getPayload();

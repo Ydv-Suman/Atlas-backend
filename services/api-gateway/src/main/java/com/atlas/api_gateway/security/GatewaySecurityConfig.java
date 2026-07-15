@@ -7,6 +7,11 @@ import org.springframework.security.config.annotation.web.reactive.EnableWebFlux
 import org.springframework.security.config.web.server.SecurityWebFiltersOrder;
 import org.springframework.security.config.web.server.ServerHttpSecurity;
 import org.springframework.security.web.server.SecurityWebFilterChain;
+import org.springframework.web.cors.CorsConfiguration;
+import org.springframework.web.cors.reactive.CorsConfigurationSource;
+import org.springframework.web.cors.reactive.UrlBasedCorsConfigurationSource;
+
+import java.util.List;
 
 @Configuration
 @EnableWebFluxSecurity
@@ -24,6 +29,21 @@ public class GatewaySecurityConfig {
                 .csrf(ServerHttpSecurity.CsrfSpec::disable)
                 .httpBasic(ServerHttpSecurity.HttpBasicSpec::disable)
                 .formLogin(ServerHttpSecurity.FormLoginSpec::disable)
+                .anonymous(ServerHttpSecurity.AnonymousSpec::disable)
+                .cors(cors -> cors.configurationSource(corsConfigurationSource()))
+                .headers(headers -> headers
+                        .frameOptions(frame -> frame.mode(org.springframework.security.web.server.header.XFrameOptionsServerHttpHeadersWriter.Mode.DENY))
+                        .contentTypeOptions(contentType -> {})
+                        .hsts(hsts -> hsts
+                                .includeSubdomains(true)
+                                .maxAge(java.time.Duration.ofDays(365))
+                        )
+                        .contentSecurityPolicy(csp -> csp.policyDirectives("default-src 'self'"))
+                        .permissionsPolicy(permissions -> permissions
+                                .policy("geolocation=(), microphone=(), camera=()"))
+                        .referrerPolicy(referrer -> {})
+                        .cache(cache -> {})
+                )
                 .authorizeExchange(exchanges -> exchanges
                         .pathMatchers(
                                 "/api/auth/login",
@@ -31,12 +51,25 @@ public class GatewaySecurityConfig {
                                 "/api/users/verify-email",
                                 "/api/users/resend-otp",
                                 "/api/github/callback",
-                                "/api/csrf/public",
-                                "/actuator/**"
+                                "/actuator/health",
+                                "/actuator/info"
                         ).permitAll()
                         .anyExchange().authenticated()
                 )
                 .addFilterAt(new JwtAuthenticationWebFilter(jwtTokenParser), SecurityWebFiltersOrder.AUTHENTICATION)
                 .build();
+    }
+
+    @Bean
+    public CorsConfigurationSource corsConfigurationSource() {
+        CorsConfiguration config = new CorsConfiguration();
+        config.setAllowedOrigins(List.of("http://localhost:3000"));
+        config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
+        config.setAllowedHeaders(List.of("Authorization", "Content-Type"));
+        config.setAllowCredentials(true);
+        config.setMaxAge(3600L);
+        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+        source.registerCorsConfiguration("/**", config);
+        return source;
     }
 }
