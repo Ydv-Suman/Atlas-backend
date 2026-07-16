@@ -18,8 +18,7 @@ Flutter App (iOS / Android)
         +---> auth-service        :8085  (users, email verification, GitHub OAuth, credits, subscription)
         +---> workspace-service   :8090  (projects, GitHub repo listing, repo validation, repo creation)
         +---> agent-service       :8083  (RAG, LLM calls, diff generation, containers)
-        +---> github-service      :8084  (repo clone, branch push, PR creation — Phase 2)
-        +---> notification-service:8085  (FCM push, WebSocket job status)
+        +---> notification-service:8095  (FCM push, WebSocket job status)
 ```
 
 ### Architectural Rules
@@ -56,8 +55,7 @@ Flutter App (iOS / Android)
 | auth-service         | 8085 | atlas_auth_db       | Implemented | Registration, email verification, GitHub OAuth, JWT issuance, credits       |
 | workspace-service    | 8090 | atlas_workspace_db  | Implemented | Project CRUD, GitHub repo listing, repo validation, repo creation           |
 | agent-service        | 8083 | atlas_agent_db      | Phase 2     | Agent job queue, RAG pipeline, LLM routing, diff generation, test runner    |
-| github-service       | 8084 | atlas_gh_db         | Phase 2     | Repo clone, branch push, PR creation, Actions workflow injection            |
-| notification-service | 8085 | — (stateless)       | Phase 1     | FCM push on job completion, WebSocket streaming for real-time job status     |
+| notification-service | 8095 | — (stateless)       | Implemented | FCM push on job completion, WebSocket streaming for real-time job status     |
 
 ## Repository Structure
 
@@ -69,8 +67,7 @@ atlas-backend/
 │   ├── auth-service/        # :8085 — users, verification, GitHub OAuth, credits
 │   ├── workspace-service/   # :8090 — projects, GitHub repos, repo validation
 │   ├── agent-service/       # :8083 — RAG, LLM, diff, containers (Phase 2)
-│   ├── github-service/      # :8084 — git operations (Phase 2)
-│   └── notification-service/# :8085 — FCM, WebSocket (Phase 1)
+│   └── notification-service/# :8095 — FCM, WebSocket
 ├── docker-compose/
 │   └── docker-compose.yml   # Local dev infrastructure
 ├── platform/
@@ -111,6 +108,14 @@ WebConfig adds `/api/` prefix to all controller paths automatically.
 | GET | `/api/workspace/projects?v=1.0` | Bearer | List user's projects |
 | GET | `/api/workspace/projects/{id}?v=1.0` | Bearer | Get project by ID |
 | DELETE | `/api/workspace/projects/{id}?v=1.0` | Bearer | Delete project |
+
+### notification-service — `/api/notify/`, `/api/ws/`
+
+| Method | Path | Auth | Description |
+|---|---|---|---|
+| POST | `/api/notify` | Internal | Send FCM push notification to user's devices |
+| POST | `/api/notify/ws` | Internal | Push real-time status update to connected WebSocket client |
+| WS | `/api/ws/jobs/{jobId}?token=JWT` | Bearer (query param) | WebSocket connection for live job status |
 
 See each service's README for request/response bodies.
 
@@ -184,13 +189,20 @@ See each service's README for request/response bodies.
    AUTH_SERVICE_URL=http://localhost:8085
    ```
 
+   **notification-service:**
+   ```properties
+   JWT_SECRET=your_jwt_secret
+   FIREBASE_CREDENTIALS_PATH=/absolute/path/to/firebase-service-account.json
+   AUTH_SERVICE_URL=http://localhost:8085
+   ```
+
    `JWT_SECRET` must be identical across all services.
 
 3. **Build all modules from root**
    ```bash
    mvn compile
    ```
-   Builds in order: shared-lib → auth-service → workspace-service.
+   Builds in order: shared-lib → auth-service → workspace-service → api-gateway → notification-service.
 
 4. **Start infrastructure with Docker Compose**
    ```bash
@@ -204,6 +216,9 @@ See each service's README for request/response bodies.
 
    # Terminal 2 — workspace-service
    mvn -f services/workspace-service/pom.xml spring-boot:run
+
+   # Terminal 3 — notification-service
+   mvn -f services/notification-service/pom.xml spring-boot:run
    ```
 
 ## Project Phases
