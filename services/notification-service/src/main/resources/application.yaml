@@ -1,3 +1,21 @@
+server:
+  port: 8095
+
 spring:
   application:
     name: notification-service
+  config:
+    import: optional:file:.env[.properties],optional:file:services/notification-service/.env[.properties]
+
+app:
+  jwt:
+    secret: ${JWT_SECRET}
+
+firebase:
+  credentials-path: ${FIREBASE_CREDENTIALS_PATH}
+
+spring.cloud.loadbalancer.retry.enabled: false
+
+feign:
+  auth-service:
+    url: ${AUTH_SERVICE_URL:http://localhost:8085}
