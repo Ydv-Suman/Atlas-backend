@@ -19,6 +19,10 @@ spring:
               uri: ${WORKSPACE_SERVICE_URL:http://localhost:8090}
               predicates:
                 - Path=/api/workspace/**
+            - id: notification-service
+              uri: ${NOTIFICATION_SERVICE_URL:http://localhost:8095}
+              predicates:
+                - Path=/api/ws/**
   config:
     import: optional:file:.env[.properties], optional:file:services/api-gateway/.env[.properties]
 management:

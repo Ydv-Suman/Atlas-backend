@@ -43,7 +43,15 @@ public class GithubController {
      */
     @GetMapping("/internal/token/{username}")
     public ResponseEntity<String> getGithubToken(@PathVariable String username) {
-        return ResponseEntity.ok(githubOAuthService.getDecryptedToken(username));
+        return githubOAuthService.getDecryptedToken(username)
+                .map(ResponseEntity::ok)
+                .orElseGet(() -> ResponseEntity.notFound().build());
+    }
+
+    @PostMapping("/internal/disconnect/{username}")
+    public ResponseEntity<Void> disconnectGithub(@PathVariable String username) {
+        githubOAuthService.disconnectGithub(username);
+        return ResponseEntity.ok().build();
     }
 
     /**
