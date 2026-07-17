@@ -2,6 +2,8 @@ package com.atlas.auth_service.service;
 
 import com.atlas.auth_service.dto.AuthorizeResponseDto;
 
+import java.util.Optional;
+
 public interface IGithubOAuthService {
 
     AuthorizeResponseDto buildAuthorizationUrl(String username);
@@ -10,5 +12,7 @@ public interface IGithubOAuthService {
 
     String getUsernameFromState(String state);
 
-    String getDecryptedToken(String username);
+    Optional<String> getDecryptedToken(String username);
+
+    void disconnectGithub(String username);
 }

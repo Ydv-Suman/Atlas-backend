@@ -21,6 +21,7 @@ import javax.crypto.spec.SecretKeySpec;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.util.Base64;
+import java.util.Optional;
 import java.util.UUID;
 
 @Service
@@ -119,11 +120,20 @@ public class GithubOAuthServiceImpl implements IGithubOAuthService {
     }
 
     @Override
-    public String getDecryptedToken(String username) {
+    public Optional<String> getDecryptedToken(String username) {
         UUID userId = resolveUserId(username);
-        GithubConnections connection = connectionRepository.findByUserId(userId)
-                .orElseThrow(() -> new RuntimeException("No GitHub connection found for user: " + username));
-        return encryptionUtil.decrypt(connection.getEncryptedAccessToken());
+        return connectionRepository.findByUserId(userId)
+                .map(connection -> encryptionUtil.decrypt(connection.getEncryptedAccessToken()));
+    }
+
+    @Override
+    public void disconnectGithub(String username) {
+        AtlasUsers user = userRepository.findByUsername(username)
+                .orElseThrow(() -> new RuntimeException("User not found: " + username));
+        connectionRepository.findByUserId(user.getId())
+                .ifPresent(connectionRepository::delete);
+        user.setGithubAuthorized(false);
+        userRepository.save(user);
     }
 
     private UUID resolveUserId(String username) {

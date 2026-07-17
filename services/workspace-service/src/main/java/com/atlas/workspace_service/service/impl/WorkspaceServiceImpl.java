@@ -12,6 +12,7 @@ import com.atlas.workspace_service.feign.AuthFeignClient;
 import com.atlas.workspace_service.mapper.WorkspaceMapper;
 import com.atlas.workspace_service.repository.WorkspaceRepository;
 import com.atlas.workspace_service.service.IWorkspaceService;
+import feign.FeignException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.HttpHeaders;
@@ -36,7 +37,7 @@ public class WorkspaceServiceImpl implements IWorkspaceService {
 
     @Override
     public List<GithubReposDto> getRepoList(String username) {
-        String githubToken = authFeignClient.getGithubToken(username);
+        String githubToken = fetchGithubToken(username);
 
         return restClient.get()
                 .uri(GITHUB_API_URL + "/user/repos?per_page=100&sort=updated&affiliation=owner,collaborator,organization_member")
@@ -53,7 +54,7 @@ public class WorkspaceServiceImpl implements IWorkspaceService {
             throw new WorkspaceAlreadyExistsException(WorkspaceConstants.MESSAGE_DUPLICATE_WORKSPACE);
         }
 
-        String githubToken = authFeignClient.getGithubToken(userId);
+        String githubToken = fetchGithubToken(userId);
         String repoName = extractRepoName(dto.getGithubUrl());
 
         if (!repoExists(dto.getRepoOwner(), repoName, githubToken)) {
@@ -72,6 +73,14 @@ public class WorkspaceServiceImpl implements IWorkspaceService {
         WorkspaceEntity entity = workspaceMapper.toEntity(dto, userId);
         WorkspaceEntity saved = workspaceRepository.save(entity);
         return workspaceMapper.toDto(saved);
+    }
+
+    private String fetchGithubToken(String username) {
+        try {
+            return authFeignClient.getGithubToken(username);
+        } catch (FeignException.NotFound e) {
+            throw new GitHubRepoException("GitHub is not connected. Please connect your GitHub account first.");
+        }
     }
 
     private boolean repoExists(String owner, String repo, String token) {

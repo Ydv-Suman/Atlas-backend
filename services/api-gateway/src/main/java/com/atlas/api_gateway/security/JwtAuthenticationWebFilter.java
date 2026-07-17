@@ -20,10 +20,16 @@ public class JwtAuthenticationWebFilter implements WebFilter {
 
     @Override
     public Mono<Void> filter(ServerWebExchange exchange, WebFilterChain chain) {
+        String token = null;
         String authHeader = exchange.getRequest().getHeaders().getFirst(HttpHeaders.AUTHORIZATION);
 
         if (authHeader != null && authHeader.startsWith("Bearer ")) {
-            String token = authHeader.substring(7);
+            token = authHeader.substring(7);
+        } else {
+            token = exchange.getRequest().getQueryParams().getFirst("token");
+        }
+
+        if (token != null) {
 
             return tokenParser.validateAndExtract(token)
                     .map(claims -> {
