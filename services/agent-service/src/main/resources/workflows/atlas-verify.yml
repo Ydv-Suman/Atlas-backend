@@ -1,0 +1,78 @@
+name: Atlas Verify
+
+on:
+  pull_request:
+    branches: [main]
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # Java / Maven
+      - name: Detect Maven
+        id: maven
+        run: test -f pom.xml && echo "found=true" >> "$GITHUB_OUTPUT" || echo "found=false" >> "$GITHUB_OUTPUT"
+
+      - name: Set up JDK 21
+        if: steps.maven.outputs.found == 'true'
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Maven verify
+        if: steps.maven.outputs.found == 'true'
+        run: mvn -B verify
+
+      # Java / Gradle
+      - name: Detect Gradle
+        id: gradle
+        run: test -f build.gradle -o -f build.gradle.kts && echo "found=true" >> "$GITHUB_OUTPUT" || echo "found=false" >> "$GITHUB_OUTPUT"
+
+      - name: Set up JDK 21 (Gradle)
+        if: steps.gradle.outputs.found == 'true' && steps.maven.outputs.found == 'false'
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Gradle build
+        if: steps.gradle.outputs.found == 'true'
+        run: ./gradlew build
+
+      # Node.js
+      - name: Detect Node
+        id: node
+        run: test -f package.json && echo "found=true" >> "$GITHUB_OUTPUT" || echo "found=false" >> "$GITHUB_OUTPUT"
+
+      - name: Set up Node 20
+        if: steps.node.outputs.found == 'true'
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Node install and test
+        if: steps.node.outputs.found == 'true'
+        run: npm ci && npm test
+
+      # Python
+      - name: Detect Python
+        id: python
+        run: (test -f requirements.txt || test -f Pipfile || test -f pyproject.toml) && echo "found=true" >> "$GITHUB_OUTPUT" || echo "found=false" >> "$GITHUB_OUTPUT"
+
+      - name: Set up Python 3.12
+        if: steps.python.outputs.found == 'true'
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Python install and test
+        if: steps.python.outputs.found == 'true'
+        run: | 
+          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+          if [ -f Pipfile ]; then pip install pipenv && pipenv install --dev; fi
+          if [ -f pyproject.toml ]; then pip install -e ".[dev]" 2>/dev/null || pip install -e .; fi
+          if [ -f manage.py ]; then python manage.py test; else pytest; fi

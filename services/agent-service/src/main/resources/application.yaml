@@ -7,7 +7,7 @@ spring:
   config:
     import: optional:file:.env[.properties],optional:file:services/agent-service/.env[.properties]
   datasource:
-    url: ${DB_URL:jdbc:postgresql://localhost:5432/atlas_agent_db}
+    url: ${DB_URL}
     username: ${DB_USERNAME}
     password: ${DB_PASSWORD}
     driver-class-name: org.postgresql.Driver
@@ -16,9 +16,6 @@ spring:
     open-in-view: false
     hibernate:
       ddl-auto: validate
-  flyway:
-    enabled: true
-    locations: classpath:db/migration
 
 app:
   jwt:
@@ -28,8 +25,6 @@ atlas:
   auth-service:
     url: ${AUTH_SERVICE_URL:http://localhost:8080}
   workspace-service:
-    url: ${WORKSPACE_SERVICE_URL:http://localhost:8095}
-  github-service:
-    url: ${GITHUB_SERVICE_URL:http://localhost:8085}
+    url: ${WORKSPACE_SERVICE_URL:http://localhost:8090}
   notification-service:
-    url: ${NOTIFICATION_SERVICE_URL:http://localhost:8082}
+    url: ${NOTIFICATION_SERVICE_URL:http://localhost:8095}
