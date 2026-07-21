@@ -30,6 +30,7 @@
         <module>services/workspace-service</module>
         <module>services/api-gateway</module>
         <module>services/notification-service</module>
+        <module>services/agent-service</module>
     </modules>
 
     <dependencyManagement>

@@ -13,6 +13,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 @RestController
@@ -38,5 +39,15 @@ public class DeviceTokenController {
             @PathVariable UUID userId
     ) {
         return ResponseEntity.ok(deviceTokenService.getTokensByUserId(userId));
+    }
+
+    @GetMapping("/auth/internal/user-identity/{userId}")
+    public ResponseEntity<Map<String, String>> getUserIdentity(@PathVariable UUID userId) {
+        AtlasUsers user = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+        return ResponseEntity.ok(Map.of(
+                "name", user.getFirstName() + " " + user.getLastName(),
+                "email", user.getEmail()
+        ));
     }
 }
