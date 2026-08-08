@@ -30,3 +30,5 @@ atlas:
     url: ${NOTIFICATION_SERVICE_URL:http://localhost:8095}
   gemini:
     api-key: ${GEMINI_API_KEY}
+  github:
+    webhook-secret: ${GITHUB_WEBHOOK_SECRET}
