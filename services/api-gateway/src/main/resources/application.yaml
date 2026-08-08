@@ -22,7 +22,11 @@ spring:
             - id: notification-service
               uri: ${NOTIFICATION_SERVICE_URL:http://localhost:8095}
               predicates:
-                - Path=/api/ws/**
+                - Path=/api/ws/**,/api/notify/**
+            - id: agent-service
+              uri: ${AGENT_SERVICE_URL:http://localhost:8083}
+              predicates:
+                - Path=/api/agent/**
   config:
     import: optional:file:.env[.properties], optional:file:services/api-gateway/.env[.properties]
 management:
