@@ -14,5 +14,5 @@ FROM eclipse-temurin:25-jre-alpine
 WORKDIR /app
 RUN apk add --no-cache curl git
 COPY --from=build /app/services/agent-service/target/*.jar app.jar
-EXPOSE 8083
+EXPOSE 9000
 ENTRYPOINT ["java", "-jar", "app.jar"]
