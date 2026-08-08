@@ -59,6 +59,56 @@ services:
       file: common-config.yml
       service: microservice-base-config
 
+  notificationservice:
+    image: "sumanydv/atlas-notification-service:v1"
+    container_name: "atlas-notification-service"
+    expose:
+      - "8095"
+    healthcheck:
+      test: "wget -qO- http://localhost:8095/actuator/health | grep UP || exit 1"
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 5s
+    depends_on:
+      atlasauthservice:
+        condition: service_healthy
+    env_file:
+      - ../services/notification-service/.env
+    environment:
+      AUTH_SERVICE_URL: "http://atlasauthservice:8085"
+    extends:
+      file: common-config.yml
+      service: microservice-base-config
+
+  agentservice:
+    image: "sumanydv/atlas-agent-service:v1"
+    container_name: "atlas-agent-service"
+    expose:
+      - "8083"
+    healthcheck:
+      test: "wget -qO- http://localhost:8083/actuator/health | grep UP || exit 1"
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 5s
+    depends_on:
+      atlasauthservice:
+        condition: service_healthy
+      workspaceservice:
+        condition: service_healthy
+      notificationservice:
+        condition: service_healthy
+    env_file:
+      - ../services/agent-service/.env
+    environment:
+      AUTH_SERVICE_URL: "http://atlasauthservice:8085"
+      WORKSPACE_SERVICE_URL: "http://workspaceservice:8090"
+      NOTIFICATION_SERVICE_URL: "http://notificationservice:8095"
+    extends:
+      file: common-config.yml
+      service: microservice-base-config
+
   apigateway:
     image: "sumanydv/atlas-api-gateway:v3"
     container_name: "atlas-api-gateway"
@@ -69,11 +119,17 @@ services:
         condition: service_healthy
       workspaceservice:
         condition: service_healthy
+      notificationservice:
+        condition: service_healthy
+      agentservice:
+        condition: service_healthy
     env_file:
       - ../services/api-gateway/.env
     environment:
       AUTH_SERVICE_URL: "http://atlasauthservice:8085"
       WORKSPACE_SERVICE_URL: "http://workspaceservice:8090"
+      NOTIFICATION_SERVICE_URL: "http://notificationservice:8095"
+      AGENT_SERVICE_URL: "http://agentservice:8083"
     extends:
       file: common-config.yml
       service: microservice-base-config
