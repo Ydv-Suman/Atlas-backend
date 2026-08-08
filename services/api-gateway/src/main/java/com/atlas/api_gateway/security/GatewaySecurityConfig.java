@@ -45,7 +45,7 @@ public class GatewaySecurityConfig {
                         .cache(cache -> {})
                 )
                 .authorizeExchange(exchanges -> exchanges
-                        .pathMatchers("/api/auth/internal/**", "/api/users/internal/**", "/api/workspace/internal/**", "/api/notify/internal/**").denyAll()
+                        .pathMatchers("/api/auth/internal/**", "/api/users/internal/**", "/api/workspace/internal/**", "/api/notify/internal/**", "/api/agent/internal/**").denyAll()
                         .pathMatchers(
                                 "/api/auth/login",
                                 "/api/users/register/public",
@@ -53,7 +53,8 @@ public class GatewaySecurityConfig {
                                 "/api/users/resend-otp",
                                 "/api/github/callback",
                                 "/actuator/health",
-                                "/actuator/info"
+                                "/actuator/info",
+                                "/api/agent/webhook/**"
                         ).permitAll()
                         .anyExchange().authenticated()
                 )
