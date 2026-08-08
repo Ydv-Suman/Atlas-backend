@@ -4,7 +4,6 @@ import com.atlas.agent_service.dto.JobRequest;
 import com.atlas.agent_service.dto.JobResponse;
 import com.atlas.agent_service.entity.AgentJob;
 import com.atlas.agent_service.entity.JobStatus;
-import com.atlas.agent_service.entity.UserAgentKey;
 import com.atlas.agent_service.feign.AuthFeignClient;
 import com.atlas.agent_service.feign.NotificationFeignClient;
 import com.atlas.agent_service.feign.WorkspaceFeignClient;
@@ -15,7 +14,6 @@ import com.atlas.agent_service.llm.LlmRequest;
 import com.atlas.agent_service.llm.LlmResponse;
 import com.atlas.agent_service.rag.RagService;
 import com.atlas.agent_service.repository.AgentJobRepository;
-import com.atlas.agent_service.repository.UserAgentKeyRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
@@ -40,7 +38,7 @@ public class AgentJobService {
     private static final int CREDIT_COST = 1;
 
     private final AgentJobRepository jobRepository;
-    private final UserAgentKeyRepository keyRepository;
+    private final UserAgentKeyService keyService;
     private final AuthFeignClient authFeignClient;
     private final WorkspaceFeignClient workspaceFeignClient;
     private final NotificationFeignClient notificationFeignClient;
@@ -55,9 +53,7 @@ public class AgentJobService {
                     "Insufficient credits. Current balance: " + balance);
         }
 
-        UserAgentKey agentKey = keyRepository.findByUserIdAndProvider(userId, request.provider())
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST,
-                        "No API key configured for provider: " + request.provider()));
+        String decryptedKey = keyService.decryptKey(userId, request.provider());
 
         AgentJob job = new AgentJob();
         job.setProjectId(request.projectId());
@@ -67,7 +63,7 @@ public class AgentJobService {
         job.setStatus(JobStatus.PENDING);
         job = jobRepository.save(job);
 
-        executeJobAsync(job.getId(), userId, agentKey.getEncryptedKey());
+        executeJobAsync(job.getId(), userId, decryptedKey);
 
         return toResponse(job);
     }
