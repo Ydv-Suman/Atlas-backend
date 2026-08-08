@@ -28,3 +28,5 @@ atlas:
     url: ${WORKSPACE_SERVICE_URL:http://localhost:8090}
   notification-service:
     url: ${NOTIFICATION_SERVICE_URL:http://localhost:8095}
+  gemini:
+    api-key: ${GEMINI_API_KEY}
