@@ -224,7 +224,7 @@ docker build -f services/agent-service/Dockerfile -t atlas-agent-service .
 Run:
 
 ```bash
-docker run -p 8083:8083 \
+docker run -p 9000:9000 \
   -e DB_URL=jdbc:postgresql://host.docker.internal:5432/atlas_agent \
   -e DB_USERNAME=postgres \
   -e DB_PASSWORD=yourpass \

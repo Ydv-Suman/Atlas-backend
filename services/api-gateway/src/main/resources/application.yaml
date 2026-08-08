@@ -24,7 +24,7 @@ spring:
               predicates:
                 - Path=/api/ws/**,/api/notify/**
             - id: agent-service
-              uri: ${AGENT_SERVICE_URL:http://localhost:8083}
+              uri: ${AGENT_SERVICE_URL:http://localhost:9000}
               predicates:
                 - Path=/api/agent/**
   config:
