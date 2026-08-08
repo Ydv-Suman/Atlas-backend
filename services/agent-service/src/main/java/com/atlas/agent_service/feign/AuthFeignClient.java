@@ -13,8 +13,11 @@ import java.util.UUID;
 @FeignClient(name = "auth-service", url = "${atlas.auth-service.url}", path = "/api/auth/internal")
 public interface AuthFeignClient {
 
-//    @PostMapping("/credits/consume")
-//    void consumeCredits(@RequestParam UUID userId, @RequestParam int amount);
+    @PostMapping("/credits/consume")
+    void consumeCredits(@RequestParam UUID userId, @RequestParam int amount);
+
+    @GetMapping("/credits/balance/{userId}")
+    int getCreditBalance(@PathVariable UUID userId);
 
     @GetMapping("/device-token/{userId}")
     List<String> getDeviceTokens(@PathVariable UUID userId);
