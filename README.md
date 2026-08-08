@@ -4,20 +4,20 @@ Mobile-first AI coding agent platform. Prompt AI agents from your phone to write
 
 ## What is Atlas?
 
-Atlas lets developers prompt AI agents (Claude, GPT-4, Gemini) to generate code, review unified diffs, run API tests, and push to GitHub entirely from iOS/Android. The phone acts as a thin terminal; all computation runs server-side in isolated microservices.
+Atlas lets developers prompt AI agents (Claude, GPT-4, Gemini) to generate code, review unified diffs, run API tests, and push to GitHub entirely from iOS/Android. Built with React Native. The phone acts as a thin terminal; all computation runs server-side in isolated microservices.
 
 **Core loop:** Prompt → AI generates diff → review on phone → approve → push to GitHub
 
 ## Architecture
 
 ```
-Flutter App (iOS / Android)
+React Native App (iOS / Android)
         |
   api-gateway :8080 — JWT validation, rate limiting, routing
         |
         +---> auth-service        :8085  (users, email verification, GitHub OAuth, credits, subscription)
         +---> workspace-service   :8090  (projects, GitHub repo listing, repo validation, repo creation)
-        +---> agent-service       :8083  (RAG, LLM calls, diff generation, containers)
+        +---> agent-service       :9000  (RAG, LLM calls, diff generation, containers)
         +---> notification-service:8095  (FCM push, WebSocket job status)
 ```
 
@@ -54,7 +54,7 @@ Flutter App (iOS / Android)
 | api-gateway          | 8080 | — (stateless)       | Planned     | JWT validation, rate limiting, onboarding gate, route to downstream         |
 | auth-service         | 8085 | atlas_auth_db       | Implemented | Registration, email verification, GitHub OAuth, JWT issuance, credits       |
 | workspace-service    | 8090 | atlas_workspace_db  | Implemented | Project CRUD, GitHub repo listing, repo validation, repo creation           |
-| agent-service        | 8083 | atlas_agent_db      | Phase 2     | Agent job queue, RAG pipeline, LLM routing, diff generation, test runner    |
+| agent-service        | 8083 | atlas_agent_db      | Implemented | Agent job queue, RAG pipeline, LLM routing, diff generation, git operations |
 | notification-service | 8095 | — (stateless)       | Implemented | FCM push on job completion, WebSocket streaming for real-time job status     |
 
 ## Repository Structure
@@ -66,7 +66,7 @@ atlas-backend/
 ├── services/
 │   ├── auth-service/        # :8085 — users, verification, GitHub OAuth, credits
 │   ├── workspace-service/   # :8090 — projects, GitHub repos, repo validation
-│   ├── agent-service/       # :8083 — RAG, LLM, diff, containers (Phase 2)
+│   ├── agent-service/       # :9000 — RAG, LLM, diff, containers (Phase 2)
 │   └── notification-service/# :8095 — FCM, WebSocket
 ├── docker-compose/
 │   └── docker-compose.yml   # Local dev infrastructure
@@ -116,6 +116,17 @@ WebConfig adds `/api/` prefix to all controller paths automatically.
 | POST | `/api/notify` | Internal | Send FCM push notification to user's devices |
 | POST | `/api/notify/ws` | Internal | Push real-time status update to connected WebSocket client |
 | WS | `/api/ws/jobs/{jobId}?token=JWT` | Bearer (query param) | WebSocket connection for live job status |
+
+### agent-service — `/api/agent/`
+
+| Method | Path | Auth | Description |
+|---|---|---|---|
+| POST | `/api/agent/jobs` | Bearer | Submit a new agent job |
+| GET | `/api/agent/jobs/{jobId}` | Bearer | Get job status and result |
+| GET | `/api/agent/jobs/project/{projectId}` | Bearer | List jobs for a project |
+| POST | `/api/agent/git/push/{jobId}` | Bearer | Push approved diff to branch |
+| POST | `/api/agent/git/pr/{jobId}` | Bearer | Create pull request from branch |
+| POST | `/api/agent/webhook/github` | Public (HMAC) | GitHub Actions workflow callback |
 
 See each service's README for request/response bodies.
 
@@ -196,13 +207,26 @@ See each service's README for request/response bodies.
    AUTH_SERVICE_URL=http://localhost:8085
    ```
 
+   **agent-service:**
+   ```properties
+   DB_URL=jdbc:postgresql://<host>/<dbname>?sslmode=require
+   DB_USERNAME=your_db_user
+   DB_PASSWORD=your_db_password
+   JWT_SECRET=your_jwt_secret
+   GEMINI_API_KEY=your_gemini_api_key
+   GITHUB_WEBHOOK_SECRET=your_webhook_secret
+   AUTH_SERVICE_URL=http://localhost:8085
+   WORKSPACE_SERVICE_URL=http://localhost:8090
+   NOTIFICATION_SERVICE_URL=http://localhost:8095
+   ```
+
    `JWT_SECRET` must be identical across all services.
 
 3. **Build all modules from root**
    ```bash
    mvn compile
    ```
-   Builds in order: shared-lib → auth-service → workspace-service → api-gateway → notification-service.
+   Builds in order: shared-lib → auth-service → workspace-service → api-gateway → notification-service → agent-service.
 
 4. **Start infrastructure with Docker Compose**
    ```bash
@@ -219,21 +243,24 @@ See each service's README for request/response bodies.
 
    # Terminal 3 — notification-service
    mvn -f services/notification-service/pom.xml spring-boot:run
+
+   # Terminal 4 — agent-service
+   mvn -f services/agent-service/pom.xml spring-boot:run
    ```
 
 ## Project Phases
 
 | Phase | Name                              | Status      |
 |-------|-----------------------------------|-------------|
-| 1     | Monorepo + Microservice Foundation| In Progress |
-| 2     | Agent Pipeline                    | Planned     |
-| 3     | Flutter App                       | Planned     |
+| 1     | Monorepo + Microservice Foundation| Complete    |
+| 2     | Agent Pipeline                    | Complete    |
+| 3     | React Native App                  | Planned     |
 | 4     | Testing Lab + Preview             | Planned     |
 | 5     | Pro Tier + Warm Containers        | Planned     |
 
 ## Related Repositories
 
-- **atlas-mobile** — Flutter app (iOS + Android). Separate repo; communicates via REST API only.
+- **atlas-mobile** — React Native app (iOS + Android). Separate repo; communicates via REST API only.
 
 ## License
 
