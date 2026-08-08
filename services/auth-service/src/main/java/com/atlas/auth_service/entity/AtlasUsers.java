@@ -74,6 +74,9 @@ public class AtlasUsers {
     @NotNull
     private UserTier tier = UserTier.FREE;
 
+    @Column(name = "credits", nullable = false)
+    private int credits = 50;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
 
