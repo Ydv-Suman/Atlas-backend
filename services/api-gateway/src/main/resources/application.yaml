@@ -14,7 +14,7 @@ spring:
             - id: auth-service
               uri: ${AUTH_SERVICE_URL:http://localhost:8085}
               predicates:
-                - Path=/api/auth/**,/api/github/**,/api/users/**
+                - Path=/api/auth/**,/api/github/**,/api/users/**,/api/csrf/**
             - id: workspace-service
               uri: ${WORKSPACE_SERVICE_URL:http://localhost:8090}
               predicates:

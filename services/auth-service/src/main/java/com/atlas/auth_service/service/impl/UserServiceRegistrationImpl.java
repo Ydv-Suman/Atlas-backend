@@ -198,7 +198,7 @@ public class UserServiceRegistrationImpl implements IUserRegistrationService {
             atlasUsers.setEmailVerified(false);
 
             String otp = otpService.generateAndStoreOtp(newEmail);
-            emailService.sendOtpEmail(newEmail, otp);
+            emailService.sendOtpEmailAsync(newEmail, otp);
         }
     }
 

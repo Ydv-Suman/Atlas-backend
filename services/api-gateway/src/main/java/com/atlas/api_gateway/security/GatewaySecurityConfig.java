@@ -51,6 +51,7 @@ public class GatewaySecurityConfig {
                                 "/api/users/register/public",
                                 "/api/users/verify-email",
                                 "/api/users/resend-otp",
+                                "/api/csrf/public",
                                 "/api/github/callback",
                                 "/actuator/health",
                                 "/actuator/info",
