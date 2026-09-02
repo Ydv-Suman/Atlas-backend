@@ -2,6 +2,7 @@ package com.atlas.workspace_service.service.impl;
 
 import com.atlas.workspace_service.constants.WorkspaceConstants;
 import com.atlas.workspace_service.dto.CreateProjectRequestDto;
+import com.atlas.workspace_service.dto.FileTreeEntryDto;
 import com.atlas.workspace_service.dto.GithubReposDto;
 import com.atlas.workspace_service.dto.WorkspaceDto;
 import com.atlas.workspace_service.entity.WorkspaceEntity;
@@ -139,6 +140,42 @@ public class WorkspaceServiceImpl implements IWorkspaceService {
         } catch (Exception e) {
             throw new GitHubRepoException(WorkspaceConstants.MESSAGE_REPO_CREATE_FAILED, e);
         }
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<FileTreeEntryDto> getFileTree(Long projectId, String path, String username) {
+        WorkspaceEntity project = workspaceRepository.findByIdAndUserId(projectId, username)
+                .orElseThrow(() -> new WorkspaceNotFoundException(WorkspaceConstants.MESSAGE_WORKSPACE_NOT_FOUND));
+
+        String githubToken = fetchGithubToken(username);
+        String owner = project.getRepoOwner();
+        String repo = extractRepoName(project.getGithubUrl());
+        String contentsPath = (path == null || path.isBlank() || "/".equals(path)) ? "" : path;
+
+        List<Map<String, Object>> contents = restClient.get()
+                .uri(GITHUB_API_URL + "/repos/{owner}/{repo}/contents/{path}", owner, repo, contentsPath)
+                .header(HttpHeaders.AUTHORIZATION, "Bearer " + githubToken)
+                .header(HttpHeaders.ACCEPT, MediaType.APPLICATION_JSON_VALUE)
+                .retrieve()
+                .body(new ParameterizedTypeReference<>() {});
+
+        if (contents == null) {
+            return List.of();
+        }
+
+        return contents.stream()
+                .map(entry -> FileTreeEntryDto.builder()
+                        .name((String) entry.get("name"))
+                        .path((String) entry.get("path"))
+                        .type("dir".equals(entry.get("type")) ? "dir" : "file")
+                        .size(entry.get("size") != null ? ((Number) entry.get("size")).longValue() : null)
+                        .build())
+                .sorted((a, b) -> {
+                    int typeCompare = a.getType().compareTo(b.getType());
+                    return typeCompare != 0 ? typeCompare : a.getName().compareToIgnoreCase(b.getName());
+                })
+                .toList();
     }
 
     private String extractRepoName(String githubUrl) {
