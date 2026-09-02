@@ -2,6 +2,7 @@ package com.atlas.workspace_service.controller;
 
 import com.atlas.workspace_service.constants.WorkspaceConstants;
 import com.atlas.workspace_service.dto.CreateProjectRequestDto;
+import com.atlas.workspace_service.dto.FileTreeEntryDto;
 import com.atlas.workspace_service.dto.GithubReposDto;
 import com.atlas.workspace_service.dto.WorkspaceDto;
 import com.atlas.workspace_service.service.IWorkspaceService;
@@ -63,5 +64,15 @@ public class WorkspaceController {
         JwtClaims claims = (JwtClaims) authentication.getDetails();
         workspaceService.deleteProject(id, claims.username());
         return ResponseEntity.ok(ApiResponse.success(WorkspaceConstants.STATUS_200, WorkspaceConstants.MESSAGE_PROJECT_DELETED));
+    }
+
+    @GetMapping(value = "/projects/{id}/tree", version = "1.0")
+    public ResponseEntity<ApiResponse<List<FileTreeEntryDto>>> getFileTree(
+            @PathVariable Long id,
+            @RequestParam(required = false, defaultValue = "/") String path,
+            Authentication authentication) {
+        JwtClaims claims = (JwtClaims) authentication.getDetails();
+        List<FileTreeEntryDto> tree = workspaceService.getFileTree(id, path, claims.username());
+        return ResponseEntity.ok(ApiResponse.success(WorkspaceConstants.STATUS_200, WorkspaceConstants.MESSAGE_PROJECTS_FETCHED, tree));
     }
 }
