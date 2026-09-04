@@ -14,6 +14,7 @@ import java.time.Instant;
 import java.util.Comparator;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.stream.Stream;
@@ -27,9 +28,9 @@ public class WorkspaceCacheService {
     private static final Duration FRESH_WINDOW = Duration.ofMinutes(30);
 
     private final GitService gitService;
-    private final ConcurrentHashMap<UUID, ReentrantLock> locks = new ConcurrentHashMap<>();
+    private final ConcurrentMap<Long, ReentrantLock> locks = new ConcurrentHashMap<>();
 
-    public String getWorkspace(UUID projectId, String repoUrl, UUID userId) throws Exception {
+    public String getWorkspace(Long projectId, String repoUrl, UUID userId) throws Exception {
         ReentrantLock lock = locks.computeIfAbsent(projectId, k -> new ReentrantLock());
 
         if (!lock.tryLock(60, TimeUnit.SECONDS)) {
@@ -68,7 +69,7 @@ public class WorkspaceCacheService {
         try (Stream<Path> dirs = Files.list(BASE_DIR)) {
             dirs.filter(Files::isDirectory).forEach(dir -> {
                 try {
-                    UUID projectId = UUID.fromString(dir.getFileName().toString());
+                    Long projectId = Long.parseLong(dir.getFileName().toString());
                     ReentrantLock lock = locks.get(projectId);
 
                     if (lock != null && lock.isLocked()) {
@@ -80,8 +81,8 @@ public class WorkspaceCacheService {
                         locks.remove(projectId);
                         log.info("Evicted stale workspace: {}", dir);
                     }
-                } catch (IllegalArgumentException e) {
-                    // directory name not a UUID, skip
+                } catch (NumberFormatException e) {
+                    // directory name not a Long, skip
                 } catch (IOException e) {
                     log.warn("Failed to evict workspace: {}", dir, e);
                 }

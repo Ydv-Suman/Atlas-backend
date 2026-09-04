@@ -129,7 +129,7 @@ public class AgentJobService {
         return toResponse(job);
     }
 
-    public List<JobResponse> getJobsByProject(UUID projectId, UUID userId) {
+    public List<JobResponse> getJobsByProject(Long projectId, UUID userId) {
         return jobRepository.findByProjectIdOrderByCreatedAtDesc(projectId).stream()
                 .filter(j -> j.getUserId().equals(userId))
                 .map(this::toResponse)

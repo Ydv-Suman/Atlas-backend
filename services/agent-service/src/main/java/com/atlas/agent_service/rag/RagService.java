@@ -12,7 +12,6 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Set;
-import java.util.UUID;
 import java.util.stream.Stream;
 
 @Slf4j
@@ -37,7 +36,7 @@ public class RagService {
     private final RepoEmbeddingRepository embeddingRepository;
 
     @Transactional
-    public void indexRepository(UUID projectId, String workspacePath, String commitHash) {
+    public void indexRepository(Long projectId, String workspacePath, String commitHash) {
         log.info("Indexing repository for project {} at {}", projectId, workspacePath);
         Path root = Path.of(workspacePath);
 
@@ -58,7 +57,7 @@ public class RagService {
     }
 
     @Transactional
-    public void invalidateFiles(UUID projectId, List<String> changedFiles) {
+    public void invalidateFiles(Long projectId, List<String> changedFiles) {
         for (String filePath : changedFiles) {
             embeddingRepository.deleteByProjectIdAndFilePath(projectId, filePath);
             log.debug("Invalidated embeddings for {}", filePath);
@@ -66,7 +65,7 @@ public class RagService {
     }
 
     @Transactional
-    public void reindexFiles(UUID projectId, String workspacePath,
+    public void reindexFiles(Long projectId, String workspacePath,
                              List<String> changedFiles, String commitHash) {
         invalidateFiles(projectId, changedFiles);
 
@@ -84,7 +83,7 @@ public class RagService {
         }
     }
 
-    public List<String> retrieve(UUID projectId, String query) {
+    public List<String> retrieve(Long projectId, String query) {
         float[] queryEmbedding = embeddingService.embed(query);
         String vectorString = embeddingService.toVectorString(queryEmbedding);
 
@@ -96,7 +95,7 @@ public class RagService {
                 .toList();
     }
 
-    private void indexFile(UUID projectId, String filePath, String content, String commitHash) {
+    private void indexFile(Long projectId, String filePath, String content, String commitHash) {
         embeddingRepository.deleteByProjectIdAndFilePath(projectId, filePath);
 
         List<ChunkingService.Chunk> chunks = chunkingService.chunkFile(filePath, content);

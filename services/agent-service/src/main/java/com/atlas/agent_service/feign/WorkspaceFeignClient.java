@@ -5,14 +5,13 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 
 import java.util.Map;
-import java.util.UUID;
 
 @FeignClient(name = "workspace-service", url = "${atlas.workspace-service.url}", path = "/api/workspace/internal")
 public interface WorkspaceFeignClient {
 
     @GetMapping("/project/{projectId}")
-    Map<String, Object> getProjectDetails(@PathVariable UUID projectId);
+    Map<String, Object> getProjectDetails(@PathVariable Long projectId);
 
     @GetMapping("/project/{projectId}/repo-url")
-    String getRepoUrl(@PathVariable UUID projectId);
+    String getRepoUrl(@PathVariable Long projectId);
 }

@@ -41,7 +41,7 @@ public class AgentJobController {
     @GetMapping("/project/{projectId}")
     public ResponseEntity<ApiResponse<List<JobResponse>>> getJobsByProject(
             @RequestHeader("X-User-Id") UUID userId,
-            @PathVariable UUID projectId) {
+            @PathVariable Long projectId) {
 
         List<JobResponse> responses = agentJobService.getJobsByProject(projectId, userId);
         return ResponseEntity.ok(ApiResponse.success("200", "Project jobs", responses));

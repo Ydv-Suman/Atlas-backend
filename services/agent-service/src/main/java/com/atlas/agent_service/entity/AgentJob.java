@@ -23,7 +23,7 @@ public class AgentJob {
 
     @NotNull
     @Column(name = "project_id", nullable = false)
-    private UUID projectId;
+    private Long projectId;
 
     @NotNull
     @Column(name = "user_id", nullable = false)
