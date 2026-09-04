@@ -24,7 +24,7 @@ public class RepoEmbedding {
 
     @NotNull
     @Column(name = "project_id", nullable = false)
-    private UUID projectId;
+    private Long projectId;
 
     @NotNull
     @Column(name = "file_path", nullable = false, columnDefinition = "TEXT")

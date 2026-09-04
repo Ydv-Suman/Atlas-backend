@@ -18,18 +18,18 @@ public interface RepoEmbeddingRepository extends JpaRepository<RepoEmbedding, UU
             LIMIT :limit
             """, nativeQuery = true)
     List<RepoEmbedding> findSimilar(
-            @Param("projectId") UUID projectId,
+            @Param("projectId") Long projectId,
             @Param("queryVector") String queryVector,
             @Param("limit") int limit);
 
-    List<RepoEmbedding> findByProjectId(UUID projectId);
+    List<RepoEmbedding> findByProjectId(Long projectId);
 
     @Modifying
     @Query("DELETE FROM RepoEmbedding r WHERE r.projectId = :projectId AND r.filePath = :filePath")
-    void deleteByProjectIdAndFilePath(@Param("projectId") UUID projectId,
+    void deleteByProjectIdAndFilePath(@Param("projectId") Long projectId,
                                       @Param("filePath") String filePath);
 
     @Modifying
     @Query("DELETE FROM RepoEmbedding r WHERE r.projectId = :projectId")
-    void deleteByProjectId(@Param("projectId") UUID projectId);
+    void deleteByProjectId(@Param("projectId") Long projectId);
 }

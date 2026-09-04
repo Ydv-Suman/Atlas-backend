@@ -7,7 +7,7 @@ import java.util.UUID;
 
 public record JobResponse(
         UUID id,
-        UUID projectId,
+        Long projectId,
         JobStatus status,
         String diffOutput,
         String errorMessage,

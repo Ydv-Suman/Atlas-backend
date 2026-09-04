@@ -8,7 +8,7 @@ import java.util.UUID;
 
 public interface ApiCatalogRepository extends JpaRepository<ApiCatalog, UUID> {
 
-    Optional<ApiCatalog> findByProjectId(UUID projectId);
+    Optional<ApiCatalog> findByProjectId(Long projectId);
 
-    void deleteByProjectId(UUID projectId);
+    void deleteByProjectId(Long projectId);
 }

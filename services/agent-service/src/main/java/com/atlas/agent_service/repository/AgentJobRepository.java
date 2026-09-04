@@ -11,7 +11,7 @@ public interface AgentJobRepository extends JpaRepository<AgentJob, UUID> {
 
     List<AgentJob> findByUserIdOrderByCreatedAtDesc(UUID userId);
 
-    List<AgentJob> findByProjectIdOrderByCreatedAtDesc(UUID projectId);
+    List<AgentJob> findByProjectIdOrderByCreatedAtDesc(Long projectId);
 
     List<AgentJob> findByUserIdAndStatus(UUID userId, JobStatus status);
 }
