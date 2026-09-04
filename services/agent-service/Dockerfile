@@ -12,7 +12,7 @@ RUN chmod +x mvnw && ./mvnw package -pl services/agent-service -am -DskipTests -
 
 FROM eclipse-temurin:25-jre-alpine
 WORKDIR /app
-RUN apk add --no-cache curl git
+RUN apk add --no-cache curl wget git
 COPY --from=build /app/services/agent-service/target/*.jar app.jar
 EXPOSE 9000
 ENTRYPOINT ["java", "-jar", "app.jar"]

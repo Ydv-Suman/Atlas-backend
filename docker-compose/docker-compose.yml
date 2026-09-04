@@ -15,7 +15,7 @@ services:
       service: network-deploy-service
 
   atlasauthservice:
-    image: "sumanydv/atlas-auth-service:v3"
+    image: "sumanydv/atlas-auth-service:v4"
     container_name: "atlas-auth-service"
     expose:
       - "8085"
@@ -38,7 +38,7 @@ services:
       service: microservice-base-config
 
   workspaceservice:
-    image: "sumanydv/atlas-workspace-service:v3"
+    image: "sumanydv/atlas-workspace-service:v4"
     container_name: "atlas-workspace-service"
     expose:
       - "8090"
@@ -60,7 +60,7 @@ services:
       service: microservice-base-config
 
   notificationservice:
-    image: "sumanydv/atlas-notification-service:v1"
+    image: "sumanydv/atlas-notification-service:v4"
     container_name: "atlas-notification-service"
     expose:
       - "8095"
@@ -77,12 +77,15 @@ services:
       - ../services/notification-service/.env
     environment:
       AUTH_SERVICE_URL: "http://atlasauthservice:8085"
+      FIREBASE_CREDENTIALS_PATH: "/app/firebase-service-account.json"
+    volumes:
+      - ../services/notification-service/firebase-service-account.json:/app/firebase-service-account.json:ro
     extends:
       file: common-config.yml
       service: microservice-base-config
 
   agentservice:
-    image: "sumanydv/atlas-agent-service:v1"
+    image: "sumanydv/atlas-agent-service:v4"
     container_name: "atlas-agent-service"
     expose:
       - "9000"
@@ -110,7 +113,7 @@ services:
       service: microservice-base-config
 
   apigateway:
-    image: "sumanydv/atlas-api-gateway:v3"
+    image: "sumanydv/atlas-api-gateway:v4"
     container_name: "atlas-api-gateway"
     ports:
       - "8080:8080"
