@@ -44,6 +44,7 @@ public class JwtService {
                 .issuer("atlas-auth-service")
                 .audience().add("atlas-api").and()
                 .subject(user.getUsername())
+                .claim("userId", user.getId().toString())
                 .claim("roles", List.of(user.getRole().name()))
                 .claim("emailVerified", user.isEmailVerified())
                 .claim("githubAuthorized", user.isGithubAuthorized())

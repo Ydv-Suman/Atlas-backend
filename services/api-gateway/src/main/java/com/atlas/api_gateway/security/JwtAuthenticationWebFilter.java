@@ -41,7 +41,14 @@ public class JwtAuthenticationWebFilter implements WebFilter {
                                 claims.username(), null, authorities);
                         authentication.setDetails(claims);
 
-                        return chain.filter(exchange)
+                            ServerWebExchange mutatedExchange = exchange;
+                        if (claims.userId() != null) {
+                            mutatedExchange = exchange.mutate()
+                                    .request(r -> r.header("X-User-Id", claims.userId()))
+                                    .build();
+                        }
+
+                        return chain.filter(mutatedExchange)
                                 .contextWrite(ReactiveSecurityContextHolder.withAuthentication(authentication));
                     })
                     .orElseGet(() -> chain.filter(exchange));

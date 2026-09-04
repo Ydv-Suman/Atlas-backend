@@ -7,6 +7,7 @@ import java.util.List;
  * Every service gets the same view of the authenticated user.
  */
 public record JwtClaims(
+        String userId,
         String username,
         List<String> roles,
         boolean emailVerified,

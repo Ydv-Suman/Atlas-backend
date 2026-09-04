@@ -15,7 +15,7 @@ services:
       service: network-deploy-service
 
   atlasauthservice:
-    image: "sumanydv/atlas-auth-service:v4"
+    image: "sumanydv/atlas-auth-service:v5"
     container_name: "atlas-auth-service"
     expose:
       - "8085"
@@ -38,7 +38,7 @@ services:
       service: microservice-base-config
 
   workspaceservice:
-    image: "sumanydv/atlas-workspace-service:v4"
+    image: "sumanydv/atlas-workspace-service:v5"
     container_name: "atlas-workspace-service"
     expose:
       - "8090"
@@ -60,7 +60,7 @@ services:
       service: microservice-base-config
 
   notificationservice:
-    image: "sumanydv/atlas-notification-service:v4"
+    image: "sumanydv/atlas-notification-service:v5"
     container_name: "atlas-notification-service"
     expose:
       - "8095"
@@ -85,7 +85,7 @@ services:
       service: microservice-base-config
 
   agentservice:
-    image: "sumanydv/atlas-agent-service:v4"
+    image: "sumanydv/atlas-agent-service:v5"
     container_name: "atlas-agent-service"
     expose:
       - "9000"
@@ -113,7 +113,7 @@ services:
       service: microservice-base-config
 
   apigateway:
-    image: "sumanydv/atlas-api-gateway:v4"
+    image: "sumanydv/atlas-api-gateway:v5"
     container_name: "atlas-api-gateway"
     ports:
       - "8080:8080"
