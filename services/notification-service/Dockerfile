@@ -12,7 +12,7 @@ RUN chmod +x mvnw && ./mvnw package -pl services/notification-service -am -Dskip
 
 FROM eclipse-temurin:25-jre-alpine
 WORKDIR /app
-RUN apk add --no-cache curl
+RUN apk add --no-cache curl wget
 COPY --from=build /app/services/notification-service/target/*.jar app.jar
 EXPOSE 8095
 ENTRYPOINT ["java", "-jar", "app.jar"]

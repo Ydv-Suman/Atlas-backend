@@ -19,6 +19,7 @@ public class SecurityConfig {
                 .formLogin(form -> form.disable())
                 .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
+                        .requestMatchers("/actuator/**").permitAll()
                         .requestMatchers("/api/notify/**").permitAll()
                         .requestMatchers("/api/ws/**").permitAll()
                         .anyRequest().denyAll()
