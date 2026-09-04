@@ -20,7 +20,7 @@ DB_PASSWORD=your_neon_password
 JWT_SECRET=your_jwt_secret
 GEMINI_API_KEY=your_gemini_api_key
 GITHUB_WEBHOOK_SECRET=your_webhook_secret
-AUTH_SERVICE_URL=http://localhost:8080
+AUTH_SERVICE_URL=http://localhost:8085
 WORKSPACE_SERVICE_URL=http://localhost:8090
 NOTIFICATION_SERVICE_URL=http://localhost:8095
 ```
