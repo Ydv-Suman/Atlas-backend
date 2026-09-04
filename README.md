@@ -54,7 +54,7 @@ React Native App (iOS / Android)
 | api-gateway          | 8080 | — (stateless)       | Planned     | JWT validation, rate limiting, onboarding gate, route to downstream         |
 | auth-service         | 8085 | atlas_auth_db       | Implemented | Registration, email verification, GitHub OAuth, JWT issuance, credits       |
 | workspace-service    | 8090 | atlas_workspace_db  | Implemented | Project CRUD, GitHub repo listing, repo validation, repo creation           |
-| agent-service        | 8083 | atlas_agent_db      | Implemented | Agent job queue, RAG pipeline, LLM routing, diff generation, git operations |
+| agent-service        | 9000 | atlas_agent_db      | Implemented | Agent job queue, RAG pipeline, LLM routing, diff generation, git operations |
 | notification-service | 8095 | — (stateless)       | Implemented | FCM push on job completion, WebSocket streaming for real-time job status     |
 
 ## Repository Structure
