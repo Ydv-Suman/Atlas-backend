@@ -43,25 +43,7 @@ public class JwtTokenParser {
     }
 
     public JwtClaims extractClaims(String token) {
-        Claims claims = parseClaims(token);
-
-        @SuppressWarnings("unchecked")
-        List<String> roles = claims.get("roles", List.class);
-        if (roles == null) {
-            roles = Collections.emptyList();
-        }
-
-        Boolean emailVerified = claims.get("emailVerified", Boolean.class);
-        Boolean githubAuthorized = claims.get("githubAuthorized", Boolean.class);
-        String tier = claims.get("tier", String.class);
-
-        return new JwtClaims(
-                claims.getSubject(),
-                roles,
-                emailVerified != null && emailVerified,
-                githubAuthorized != null && githubAuthorized,
-                tier != null ? tier : "FREE"
-        );
+        return buildJwtClaims(parseClaims(token));
     }
 
     /**
@@ -94,11 +76,13 @@ public class JwtTokenParser {
             roles = Collections.emptyList();
         }
 
+        String userId = claims.get("userId", String.class);
         Boolean emailVerified = claims.get("emailVerified", Boolean.class);
         Boolean githubAuthorized = claims.get("githubAuthorized", Boolean.class);
         String tier = claims.get("tier", String.class);
 
         return new JwtClaims(
+                userId,
                 claims.getSubject(),
                 roles,
                 emailVerified != null && emailVerified,
