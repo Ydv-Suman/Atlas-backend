@@ -1,7 +1,7 @@
 package com.atlas.workspace_service.dto;
 
 import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -27,10 +27,12 @@ public class CreateProjectRequestDto {
     @NotBlank(message = "Repo owner is required")
     private String repoOwner;
 
-    @NotNull(message = "Repo ownership is required")
+    @NotBlank(message = "Repo ownership is required")
+    @Pattern(regexp = "(?i)(OWNER|COLLABORATOR|FORK)", message = "Repo ownership must be OWNER, COLLABORATOR, or FORK")
     private String repoOwnership;
 
-    @NotNull(message = "Repo visibility is required")
+    @NotBlank(message = "Repo visibility is required")
+    @Pattern(regexp = "(?i)(PUBLIC|PRIVATE)", message = "Repo visibility must be PUBLIC or PRIVATE")
     private String repoVisibility;
 
     private String projectType;

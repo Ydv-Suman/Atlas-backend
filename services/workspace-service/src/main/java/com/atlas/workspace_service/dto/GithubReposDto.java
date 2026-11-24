@@ -39,6 +39,8 @@ public class GithubReposDto {
 
     private boolean fork;
 
+    private java.util.Map<String, Boolean> permissions;
+
     @JsonProperty("stargazers_count")
     private int stargazersCount;
 
