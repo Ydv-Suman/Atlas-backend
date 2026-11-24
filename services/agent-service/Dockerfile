@@ -14,7 +14,7 @@ FROM node:22-bookworm-slim AS agent-runtime
 WORKDIR /app/runtime
 COPY services/agent-service/runtime/package*.json ./
 RUN npm ci --omit=dev
-COPY services/agent-service/runtime/bridge.mjs services/agent-service/runtime/files.mjs ./
+COPY services/agent-service/runtime/bridge.mjs services/agent-service/runtime/files.mjs services/agent-service/runtime/git.mjs ./
 
 FROM eclipse-temurin:25-jdk AS runtime
 WORKDIR /app
