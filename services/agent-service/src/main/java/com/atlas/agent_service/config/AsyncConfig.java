@@ -12,8 +12,8 @@ public class AsyncConfig {
     @Bean(name = "agentTaskExecutor")
     public Executor agentTaskExecutor() {
         ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
-        executor.setCorePoolSize(3);
-        executor.setMaxPoolSize(5);
+        executor.setCorePoolSize(2);
+        executor.setMaxPoolSize(2);
         executor.setQueueCapacity(25);
         executor.setThreadNamePrefix("agent-job-");
         executor.initialize();

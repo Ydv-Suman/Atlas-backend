@@ -59,17 +59,10 @@ public class GitService {
             Path diffFile = Files.createTempFile("atlas-temp", ".patch");
             Files.writeString(diffFile, diff);
 
-            Process process = new ProcessBuilder("git", "apply", diffFile.toAbsolutePath().toString())
-                    .directory(new File(clonePath))
-                    .redirectErrorStream(true)
-                    .start();
-
-            String output = new String(process.getInputStream().readAllBytes());
-            int exitCode = process.waitFor();
-            Files.deleteIfExists(diffFile);
-
-            if (exitCode != 0) {
-                throw new IOException("git apply failed (exit " + exitCode + "): " + output);
+            try {
+                GitPatch.apply(Path.of(clonePath), diffFile, false);
+            } finally {
+                Files.deleteIfExists(diffFile);
             }
 
             git.add().addFilepattern(".").call();
@@ -96,7 +89,7 @@ public class GitService {
                 "body", description
         );
 
-        Map<?, ?> response = webClientBuilder.build()
+        Map<?, ?> response = webClientBuilder.clone().build()
                 .post()
                 .uri("https://api.github.com/repos/{repo}/pulls", repoFullName)
                 .header("Authorization", "Bearer " + token)

@@ -3,6 +3,7 @@ package com.atlas.workspace_service.controller;
 import com.atlas.workspace_service.constants.WorkspaceConstants;
 import com.atlas.workspace_service.dto.CreateProjectRequestDto;
 import com.atlas.workspace_service.dto.FileTreeEntryDto;
+import com.atlas.workspace_service.dto.FileContentDto;
 import com.atlas.workspace_service.dto.GithubReposDto;
 import com.atlas.workspace_service.dto.WorkspaceDto;
 import com.atlas.workspace_service.service.IWorkspaceService;
@@ -64,6 +65,14 @@ public class WorkspaceController {
         JwtClaims claims = (JwtClaims) authentication.getDetails();
         workspaceService.deleteProject(id, claims.username());
         return ResponseEntity.ok(ApiResponse.success(WorkspaceConstants.STATUS_200, WorkspaceConstants.MESSAGE_PROJECT_DELETED));
+    }
+
+    @GetMapping(value = "/projects/{id}/file", version = "1.0")
+    public ResponseEntity<ApiResponse<FileContentDto>> getFileContent(
+            @PathVariable Long id, @RequestParam String path, Authentication authentication) {
+        JwtClaims claims = (JwtClaims) authentication.getDetails();
+        return ResponseEntity.ok(ApiResponse.success(WorkspaceConstants.STATUS_200,
+                "File loaded", workspaceService.getFileContent(id, path, claims.username())));
     }
 
     @GetMapping(value = "/projects/{id}/tree", version = "1.0")

@@ -46,6 +46,7 @@ public class DeviceTokenController {
         AtlasUsers user = userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("User not found"));
         return ResponseEntity.ok(Map.of(
+                "username", user.getUsername(),
                 "name", user.getFirstName() + " " + user.getLastName(),
                 "email", user.getEmail()
         ));

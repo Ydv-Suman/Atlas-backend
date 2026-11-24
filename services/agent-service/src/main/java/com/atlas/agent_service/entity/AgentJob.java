@@ -45,6 +45,15 @@ public class AgentJob {
     @Column(name = "diff_output", columnDefinition = "TEXT")
     private String diffOutput;
 
+    @Column(name = "response_text", columnDefinition = "TEXT")
+    private String responseText;
+
+    @Column(name = "events_json", columnDefinition = "TEXT")
+    private String eventsJson;
+
+    @Column(name = "step", length = 40)
+    private String step;
+
     @Column(name = "credits_consumed")
     private Integer creditsConsumed;
 

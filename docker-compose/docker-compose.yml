@@ -87,6 +87,10 @@ services:
   agentservice:
     image: "sumanydv/atlas-agent-service:v5"
     container_name: "atlas-agent-service"
+    deploy:
+      resources:
+        limits:
+          memory: 2g
     expose:
       - "9000"
     healthcheck:
@@ -108,6 +112,8 @@ services:
       AUTH_SERVICE_URL: "http://atlasauthservice:8085"
       WORKSPACE_SERVICE_URL: "http://workspaceservice:8090"
       NOTIFICATION_SERVICE_URL: "http://notificationservice:8095"
+    volumes:
+      - agent-sessions:/data/agent-sessions
     extends:
       file: common-config.yml
       service: microservice-base-config
@@ -141,3 +147,6 @@ services:
 networks:
   atlas-network:
     driver: bridge
+
+volumes:
+  agent-sessions:

@@ -51,6 +51,7 @@ public class AgentSecurityConfig {
                                 .policy("geolocation=(), microphone=(), camera=()"))
                 )
                 .authorizeHttpRequests(requests -> {
+                    requests.dispatcherTypeMatchers(jakarta.servlet.DispatcherType.ASYNC).permitAll();
                     publicPaths.forEach(path -> requests.requestMatchers(path).permitAll());
                     internalPaths.forEach(path -> requests.requestMatchers(path).denyAll());
                     securePaths.forEach(path -> requests.requestMatchers(path).authenticated());
