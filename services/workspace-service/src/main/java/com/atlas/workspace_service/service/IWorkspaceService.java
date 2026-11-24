@@ -2,6 +2,7 @@ package com.atlas.workspace_service.service;
 
 import com.atlas.workspace_service.dto.CreateProjectRequestDto;
 import com.atlas.workspace_service.dto.FileTreeEntryDto;
+import com.atlas.workspace_service.dto.FileContentDto;
 import com.atlas.workspace_service.dto.GithubReposDto;
 import com.atlas.workspace_service.dto.WorkspaceDto;
 
@@ -20,4 +21,6 @@ public interface IWorkspaceService {
     void deleteProject(Long id, String userId);
 
     List<FileTreeEntryDto> getFileTree(Long projectId, String path, String username);
+
+    FileContentDto getFileContent(Long projectId, String path, String username);
 }

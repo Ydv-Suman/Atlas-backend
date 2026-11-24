@@ -11,7 +11,8 @@ public class PathsConfig {
     @Bean(name = "publicPaths")
     public List<String> publicPaths() {
         return List.of(
-                "/actuator/**"
+                "/actuator/**",
+                "/api/workspace/internal/**"
         );
     }
 

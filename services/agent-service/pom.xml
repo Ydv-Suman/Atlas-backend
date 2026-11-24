@@ -57,9 +57,8 @@
         </dependency>
 
         <dependency>
-            <groupId>com.pgvector</groupId>
-            <artifactId>pgvector</artifactId>
-            <version>0.1.6</version>
+            <groupId>org.hibernate.orm</groupId>
+            <artifactId>hibernate-vector</artifactId>
         </dependency>
         <dependency>
             <groupId>org.eclipse.jgit</groupId>

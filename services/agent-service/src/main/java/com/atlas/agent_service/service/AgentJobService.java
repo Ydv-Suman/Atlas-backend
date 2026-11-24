@@ -8,16 +8,20 @@ import com.atlas.agent_service.feign.AuthFeignClient;
 import com.atlas.agent_service.feign.NotificationFeignClient;
 import com.atlas.agent_service.feign.WorkspaceFeignClient;
 import com.atlas.agent_service.git.WorkspaceCacheService;
+import com.atlas.agent_service.git.GitPatch;
 import com.atlas.agent_service.llm.LlmProvider;
 import com.atlas.agent_service.llm.LlmProviderFactory;
 import com.atlas.agent_service.llm.LlmRequest;
 import com.atlas.agent_service.llm.LlmResponse;
+import com.atlas.agent_service.llm.LlmException;
+import org.springframework.web.reactive.function.client.WebClientResponseException;
+import org.springframework.web.reactive.function.client.WebClientRequestException;
 import com.atlas.agent_service.rag.RagService;
 import com.atlas.agent_service.repository.AgentJobRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
-import org.springframework.scheduling.annotation.Async;
+import com.atlas.shared.exception.InsufficientCreditsException;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
@@ -28,6 +32,9 @@ import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.Executor;
+import java.util.concurrent.RejectedExecutionException;
+import feign.FeignException;
 import java.util.stream.Stream;
 
 @Slf4j
@@ -40,16 +47,22 @@ public class AgentJobService {
     private final AgentJobRepository jobRepository;
     private final UserAgentKeyService keyService;
     private final AuthFeignClient authFeignClient;
-    private final WorkspaceFeignClient workspaceFeignClient;
     private final NotificationFeignClient notificationFeignClient;
-    private final WorkspaceCacheService workspaceCacheService;
-    private final LlmProviderFactory providerFactory;
-    private final RagService ragService;
+    private final com.atlas.agent_service.runtime.SessionWorkspaceService sessions;
+    private final com.atlas.agent_service.runtime.AgentRuntimeService runtime;
+    private final com.atlas.agent_service.runtime.AgentEventHub events;
+    private final Executor agentTaskExecutor;
 
     public JobResponse submitJob(UUID userId, JobRequest request) {
+        synchronized (sessions.lock(userId, request.projectId())) {
+        sessions.checkOwner(userId, request.projectId());
+        if (!List.of("openai", "claude").contains(request.provider()))
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Interactive agents currently support OpenAI and Claude. Select one of these providers.");
+        if (jobRepository.existsByProjectIdAndUserIdAndStatusIn(request.projectId(), userId, List.of(JobStatus.PENDING, JobStatus.RUNNING)))
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "This project already has an active agent. Stop it or wait for its reply.");
         int balance = authFeignClient.getCreditBalance(userId);
         if (balance < CREDIT_COST) {
-            throw new ResponseStatusException(HttpStatus.PAYMENT_REQUIRED,
+            throw new InsufficientCreditsException(
                     "Insufficient credits. Current balance: " + balance);
         }
 
@@ -61,44 +74,42 @@ public class AgentJobService {
         job.setPrompt(request.prompt());
         job.setAgentProvider(request.provider());
         job.setStatus(JobStatus.PENDING);
-        job = jobRepository.save(job);
+        job.setEventsJson("[]");
+        try { job = jobRepository.save(job); }
+        catch (org.springframework.dao.DataIntegrityViolationException e) { throw new ResponseStatusException(HttpStatus.CONFLICT, "This project already has an active agent."); }
 
-        executeJobAsync(job.getId(), userId, decryptedKey);
-
-        return toResponse(job);
+        JobResponse response = toResponse(job);
+        UUID jobId = job.getId();
+        try {
+            agentTaskExecutor.execute(() -> executeJobAsync(jobId, userId, decryptedKey));
+        } catch (RejectedExecutionException e) {
+            job.setStatus(JobStatus.FAILED);
+            job.setErrorMessage("The agent is busy. Please try again shortly.");
+            job.setCompletedAt(Instant.now());
+            return toResponse(jobRepository.save(job));
+        }
+        return response;
+        }
     }
 
-    @Async("agentTaskExecutor")
     public void executeJobAsync(UUID jobId, UUID userId, String apiKey) {
         AgentJob job = jobRepository.findById(jobId).orElseThrow();
         job.setStatus(JobStatus.RUNNING);
         jobRepository.save(job);
         notifyStatus(job, "RUNNING");
 
+        Path workspace = null;
         try {
-            String repoUrl = workspaceFeignClient.getRepoUrl(job.getProjectId());
-            String workspacePath = workspaceCacheService.getWorkspace(
-                    job.getProjectId(), repoUrl, userId);
-
-            notifyStatus(job, "INDEXING");
-            ragService.indexRepository(job.getProjectId(), workspacePath, null);
-
-            notifyStatus(job, "RETRIEVING_CONTEXT");
-            List<String> contextChunks = ragService.retrieve(job.getProjectId(), job.getPrompt());
-            String fileTree = buildFileTree(workspacePath);
-
-            notifyStatus(job, "GENERATING_DIFF");
-            LlmProvider provider = providerFactory.getProvider(job.getAgentProvider());
-            LlmRequest llmRequest = new LlmRequest(job.getPrompt(), fileTree, contextChunks);
-            LlmResponse llmResponse = provider.generateDiff(llmRequest, apiKey);
-
-            notifyStatus(job, "VALIDATING");
-            validateDiff(workspacePath, llmResponse.diff());
+            if (events.cancelled(job)) throw new java.util.concurrent.CancellationException();
+            workspace = sessions.prepare(userId, job.getProjectId());
+            String responseText = runtime.run(job, workspace, apiKey);
+            String diff = sessions.changes(workspace);
 
             authFeignClient.consumeCredits(userId, CREDIT_COST);
 
             job.setStatus(JobStatus.COMPLETED);
-            job.setDiffOutput(llmResponse.diff());
+            job.setDiffOutput(diff.isBlank() ? null : diff);
+            job.setResponseText(responseText);
             job.setCreditsConsumed(CREDIT_COST);
             job.setCompletedAt(Instant.now());
             jobRepository.save(job);
@@ -108,13 +119,60 @@ public class AgentJobService {
 
         } catch (Exception e) {
             log.error("Job {} failed: {}", jobId, e.getMessage(), e);
-            job.setStatus(JobStatus.FAILED);
-            job.setErrorMessage(e.getMessage());
+            boolean stopped = events.cancelled(job) || e instanceof java.util.concurrent.CancellationException;
+            job.setStatus(stopped ? JobStatus.CANCELLED : JobStatus.FAILED);
+            job.setErrorMessage(stopped ? "Stopped. Your file changes were saved." : failureReason(e));
+            if (workspace != null) try { job.setDiffOutput(sessions.changes(workspace)); } catch (Exception ignored) { /* The workspace itself remains durable. */ }
             job.setCompletedAt(Instant.now());
             jobRepository.save(job);
 
-            notifyStatus(job, "FAILED");
-            notifyFailure(job);
+            notifyStatus(job, job.getStatus().name());
+            if (job.getStatus() == JobStatus.FAILED) notifyFailure(job);
+        } finally { events.finish(job); }
+    }
+
+    static String failureReason(Exception error) {
+        String message = error.getMessage() == null ? "" : error.getMessage();
+        if (error instanceof LlmException) return message;
+        if (error instanceof WebClientResponseException response) {
+            return switch (response.getStatusCode().value()) {
+                case 401, 403 -> "The AI provider rejected the API key. Update it in Connect.";
+                case 429 -> "The AI provider quota or rate limit was reached. Check the provider account.";
+                case 404 -> "The selected AI model is unavailable.";
+                default -> "The AI provider couldn't process the request. Try again.";
+            };
+        }
+        if (error instanceof WebClientRequestException) return "Couldn't connect to the AI provider.";
+        if (message.contains("WorkspaceFeignClient")) return "Couldn't load the project repository.";
+        if (message.contains("getGithubToken")) return "Couldn't access the GitHub connection. Reconnect GitHub in Connect.";
+        if (error instanceof InsufficientCreditsException || message.toLowerCase().contains("insufficient credits")) {
+            return "Not enough credits. Add credits to continue.";
+        }
+        if (error instanceof FeignException) return "Couldn't reach a required service. Try again.";
+        if (message.startsWith("Diff validation failed")) return "The generated changes could not be applied.";
+        if (message.contains("dimensions") && (message.contains("embedding") || message.contains("repo_embeddings"))) {
+            return "Code indexing storage is misconfigured. The embedding dimensions do not match.";
+        }
+        return "The agent couldn't complete the request. Try again.";
+    }
+
+    public AgentJob ownedJob(UUID jobId, UUID userId) {
+        AgentJob job = jobRepository.findById(jobId).orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Job not found"));
+        if (!userId.equals(job.getUserId())) throw new ResponseStatusException(HttpStatus.FORBIDDEN);
+        return job;
+    }
+
+    public void stop(UUID jobId, UUID userId) {
+        AgentJob job = ownedJob(jobId, userId);
+        if (List.of(JobStatus.PENDING, JobStatus.RUNNING).contains(job.getStatus())) events.cancel(job);
+    }
+
+    @org.springframework.context.event.EventListener(org.springframework.boot.context.event.ApplicationReadyEvent.class)
+    public void recoverInterruptedTurns() {
+        for (var job : jobRepository.findByStatusIn(List.of(JobStatus.PENDING, JobStatus.RUNNING))) {
+            job.setStatus(JobStatus.FAILED);
+            job.setErrorMessage("The agent service restarted. Your files were saved. Send another prompt to resume.");
+            job.setCompletedAt(Instant.now()); jobRepository.save(job);
         }
     }
 
@@ -136,55 +194,16 @@ public class AgentJobService {
                 .toList();
     }
 
-    private void validateDiff(String workspacePath, String diff) throws IOException, InterruptedException {
-        Path diffFile = Files.createTempFile("atlas-validate", ".patch");
-        Files.writeString(diffFile, diff);
-
-        try {
-            Process process = new ProcessBuilder("git", "apply", "--check", diffFile.toAbsolutePath().toString())
-                    .directory(Path.of(workspacePath).toFile())
-                    .redirectErrorStream(true)
-                    .start();
-
-            String output = new String(process.getInputStream().readAllBytes());
-            int exitCode = process.waitFor();
-
-            if (exitCode != 0) {
-                throw new IOException("Diff validation failed: " + output);
-            }
-        } finally {
-            Files.deleteIfExists(diffFile);
-        }
-    }
-
-    private String buildFileTree(String workspacePath) {
-        Path root = Path.of(workspacePath);
-        var sb = new StringBuilder();
-
-        try (Stream<Path> walk = Files.walk(root, 4)) {
-            walk.filter(p -> !p.toString().contains("/.git/"))
-                    .filter(p -> !p.toString().contains("/node_modules/"))
-                    .filter(p -> !p.toString().contains("/target/"))
-                    .forEach(p -> {
-                        int depth = root.relativize(p).getNameCount();
-                        String indent = "  ".repeat(Math.max(0, depth - 1));
-                        sb.append(indent).append(p.getFileName()).append("\n");
-                    });
-        } catch (IOException e) {
-            log.warn("Failed to build file tree: {}", e.getMessage());
-        }
-
-        return sb.toString();
-    }
-
     private void notifyStatus(AgentJob job, String step) {
+        job.setStep(step);
+        jobRepository.save(job);
         try {
             notificationFeignClient.sendWebSocketUpdate(Map.of(
-                    "type", "JOB_STATUS",
-                    "userId", job.getUserId().toString(),
                     "jobId", job.getId().toString(),
-                    "projectId", job.getProjectId().toString(),
-                    "step", step
+                    "step", step,
+                    "status", job.getStatus().name(),
+                    "message", job.getErrorMessage() != null ? job.getErrorMessage() : step,
+                    "timestamp", Instant.now().toString()
             ));
         } catch (Exception e) {
             log.warn("Failed to send status update: {}", e.getMessage());
@@ -193,12 +212,11 @@ public class AgentJobService {
 
     private void notifyCompletion(AgentJob job) {
         try {
-            List<String> tokens = authFeignClient.getDeviceTokens(job.getUserId());
             notificationFeignClient.sendPush(Map.of(
-                    "tokens", tokens,
-                    "title", "Diff Ready",
-                    "body", "Your code changes are ready for review",
-                    "data", Map.of("jobId", job.getId().toString())
+                    "userId", job.getUserId().toString(),
+                    "jobId", job.getId().toString(),
+                    "status", "COMPLETED",
+                    "message", "Your agent response is ready"
             ));
         } catch (Exception e) {
             log.warn("Failed to send completion notification: {}", e.getMessage());
@@ -207,12 +225,11 @@ public class AgentJobService {
 
     private void notifyFailure(AgentJob job) {
         try {
-            List<String> tokens = authFeignClient.getDeviceTokens(job.getUserId());
             notificationFeignClient.sendPush(Map.of(
-                    "tokens", tokens,
-                    "title", "Job Failed",
-                    "body", job.getErrorMessage() != null ? job.getErrorMessage() : "Unknown error",
-                    "data", Map.of("jobId", job.getId().toString())
+                    "userId", job.getUserId().toString(),
+                    "jobId", job.getId().toString(),
+                    "status", "FAILED",
+                    "message", job.getErrorMessage() != null ? job.getErrorMessage() : "The agent couldn't complete the request."
             ));
         } catch (Exception e) {
             log.warn("Failed to send failure notification: {}", e.getMessage());
@@ -228,7 +245,13 @@ public class AgentJobService {
                 job.getErrorMessage(),
                 job.getCreditsConsumed(),
                 job.getCreatedAt(),
-                job.getCompletedAt()
+                job.getCompletedAt(),
+                job.getPrompt(),
+                job.getResponseText(),
+                job.getAgentProvider(),
+                job.getStep(),
+                job.getEventsJson() == null ? List.of() : tools.jackson.databind.json.JsonMapper.builder().build().readValue(job.getEventsJson(), List.class),
+                job.getEventsJson() != null
         );
     }
 }

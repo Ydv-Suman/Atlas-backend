@@ -1,0 +1,17 @@
+# Atlas interactive agent runtime
+
+The Java agent service owns authentication, credits, durable workspaces, jobs and SSE streams. `bridge.mjs` runs the official Codex App Server for OpenAI keys and Claude Agent SDK for Anthropic keys. Gemini keys remain stored in Connect but are not interactive runtimes.
+
+Each user/project keeps a repository, provider session history and private runtime home in `/data/agent-sessions/<user UUID>/<project ID>`. The Compose named volume survives container recreation. Existing unpushed files are never reset to GitHub or evicted. Older successful patch previews are imported once where they apply without overwriting work.
+
+Docker runs each project's runtime as a distinct unprivileged numeric UID. The bridge receives only a minimal environment and that turn's provider key. Shell permission requests include the actual command and are returned to the app. On Docker hosts that block unprivileged namespaces, Codex may ask for approval to retry a command outside its inner sandbox; Atlas keeps the distinct unprivileged project UID in that case. Host sandbox settings are not weakened. unsupported permission grants are denied. Model output and command events exclude private reasoning events. No GitHub push is performed by this integration.
+
+Apply `V8__persistent_agent_runtime.sql` before starting the new agent image, following the project's existing database migration procedure. Build with the agent-service Dockerfile and use the updated Compose file, including the `agent-sessions` volume. Keep one agent-service instance per session volume; shared routing and distributed workspace locks are required before scaling replicas.
+
+The app reads and edits the session's real files. The editor automatically saves edits after a 700ms typing pause and resumes pending saves once the agent is idle. Sending a prompt first attempts to save the selected pending edit. Conflicts retain the device copy and show a retry action without blocking chat. Writes require the previous content hash and are blocked during an active turn. Local SQLite separately preserves editor drafts, visited folder listings, generated-file previews, chat history and the editor/chat split, partitioned by account and project. Leaving a screen, backgrounding the app or restarting does not discard unpublished work. Reinstalling the app can remove its device copy; the backend volume remains authoritative.
+
+The file panel has file-plus and folder-plus controls for the current directory. Long press an entry to confirm deletion with Cancel/Delete; deleted files and nonempty folders move to private workspace trash. The app shows no deletion banner after confirmation. Creating an existing name or restoring over a replacement is rejected. These operations are blocked while the agent is running.
+
+`GET /api/agent/jobs/{id}/events?after=N` streams replayable SSE events. Polling is retained for reconnect recovery. `POST /{id}/answer` answers an approval or question; `POST /{id}/stop` stops the turn. A later prompt resumes the saved provider session. A service restart marks interrupted turns as failed without deleting their files.
+
+Runtime tests: `npm test` in this directory. Java tests cover workspace retention, ownership aliases, stale-save conflicts, approvals and job lifecycle. Mobile tests cover stream framing, event deduplication, local storage and divider limits. Live verification requires the user's valid provider key and consumes provider usage.

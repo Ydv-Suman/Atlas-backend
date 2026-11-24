@@ -5,6 +5,7 @@ import jakarta.validation.constraints.NotNull;
 import lombok.Getter;
 import lombok.Setter;
 import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.annotations.Array;
 import org.hibernate.type.SqlTypes;
 
 import java.time.Instant;
@@ -39,6 +40,8 @@ public class RepoEmbedding {
     private String content;
 
     @NotNull
+    @JdbcTypeCode(SqlTypes.VECTOR)
+    @Array(length = 768)
     @Column(name = "embedding", nullable = false, columnDefinition = "vector(768)")
     private float[] embedding;
 

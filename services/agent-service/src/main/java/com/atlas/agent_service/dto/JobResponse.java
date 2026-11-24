@@ -13,5 +13,11 @@ public record JobResponse(
         String errorMessage,
         Integer creditsConsumed,
         Instant createdAt,
-        Instant completedAt
+        Instant completedAt,
+        String prompt,
+        String responseText,
+        String provider,
+        String step,
+        java.util.List<java.util.Map<String,Object>> events,
+        boolean interactive
 ) {}

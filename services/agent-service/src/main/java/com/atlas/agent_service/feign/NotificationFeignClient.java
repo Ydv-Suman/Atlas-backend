@@ -6,10 +6,10 @@ import org.springframework.web.bind.annotation.RequestBody;
 
 import java.util.Map;
 
-@FeignClient(name = "notification-service", url = "${atlas.notification-service.url}", path = "/api/notify/internal")
+@FeignClient(name = "notification-service", url = "${atlas.notification-service.url}", path = "/api/notify")
 public interface NotificationFeignClient {
 
-    @PostMapping("/push")
+    @PostMapping
     void sendPush(@RequestBody Map<String, Object> notification);
 
     @PostMapping("/ws")

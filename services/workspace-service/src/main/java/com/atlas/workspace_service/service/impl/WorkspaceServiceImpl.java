@@ -3,6 +3,7 @@ package com.atlas.workspace_service.service.impl;
 import com.atlas.workspace_service.constants.WorkspaceConstants;
 import com.atlas.workspace_service.dto.CreateProjectRequestDto;
 import com.atlas.workspace_service.dto.FileTreeEntryDto;
+import com.atlas.workspace_service.dto.FileContentDto;
 import com.atlas.workspace_service.dto.GithubReposDto;
 import com.atlas.workspace_service.dto.WorkspaceDto;
 import com.atlas.workspace_service.entity.WorkspaceEntity;
@@ -24,6 +25,12 @@ import org.springframework.web.client.RestClient;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Base64;
+import java.nio.ByteBuffer;
+import java.nio.charset.StandardCharsets;
+import java.nio.charset.CharacterCodingException;
+import org.springframework.http.HttpStatus;
+import org.springframework.web.server.ResponseStatusException;
 
 @Service
 @RequiredArgsConstructor
@@ -176,6 +183,44 @@ public class WorkspaceServiceImpl implements IWorkspaceService {
                     return typeCompare != 0 ? typeCompare : a.getName().compareToIgnoreCase(b.getName());
                 })
                 .toList();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public FileContentDto getFileContent(Long projectId, String path, String username) {
+        WorkspaceEntity project = workspaceRepository.findByIdAndUserId(projectId, username)
+                .orElseThrow(() -> new WorkspaceNotFoundException(WorkspaceConstants.MESSAGE_WORKSPACE_NOT_FOUND));
+        if (path == null || path.isBlank() || path.startsWith("/") || path.contains("\\")
+                || List.of(path.split("/", -1)).stream().anyMatch(p -> p.equals("..") || p.equals(".") || p.isEmpty())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid file path");
+        }
+        Map<String, Object> file = restClient.get()
+                .uri(GITHUB_API_URL + "/repos/{owner}/{repo}/contents/{path}",
+                        project.getRepoOwner(), extractRepoName(project.getGithubUrl()), path)
+                .header(HttpHeaders.AUTHORIZATION, "Bearer " + fetchGithubToken(username))
+                .header(HttpHeaders.ACCEPT, "application/vnd.github.object+json")
+                .retrieve()
+                .body(new ParameterizedTypeReference<>() {});
+        if (file == null || !"file".equals(file.get("type"))) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Select a text file");
+        }
+        if (!(file.get("size") instanceof Number size) || size.longValue() > 262144
+                || !"base64".equals(file.get("encoding"))) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Open a text file smaller than 256 KB");
+        }
+        return new FileContentDto(path, decodeText((String) file.get("content")));
+    }
+
+    static String decodeText(String encoded) {
+        try {
+            byte[] bytes = Base64.getDecoder().decode(encoded.replaceAll("\\s", ""));
+            if (bytes.length > 262144) throw new IllegalArgumentException();
+            String text = StandardCharsets.UTF_8.newDecoder().decode(ByteBuffer.wrap(bytes)).toString();
+            if (text.indexOf('\0') >= 0) throw new IllegalArgumentException();
+            return text;
+        } catch (IllegalArgumentException | CharacterCodingException | NullPointerException e) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "This file is not supported UTF-8 text");
+        }
     }
 
     private String extractRepoName(String githubUrl) {
